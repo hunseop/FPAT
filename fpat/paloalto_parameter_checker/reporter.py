@@ -33,7 +33,7 @@ def save_report_to_excel(report: list, filename: str, hostname: str):
     )
 
     for col_num in range(2, 6):
-        cell = ws.cell(row=4, coulmn=col_num)
+        cell = ws.cell(row=4, column=col_num)
         cell.fill = header_fill
         cell.font = header_font
         cell.alignment = Alignment(horizontal="center", vertical="center")
@@ -59,7 +59,7 @@ def save_report_to_excel(report: list, filename: str, hostname: str):
     
     for col in range(2, 6):
         max_len = max(len(str(ws.cell(row=row, column=col).value or "")) for row in range(4, ws.max_row +1 ))
-        ws.columns_dimensions[get_column_letter(col)].width = max_len + 4
+        ws.column_dimensions[get_column_letter(col)].width = max_len + 4
     
     wb.save(filename)
     os.remove(tmp_filename)
