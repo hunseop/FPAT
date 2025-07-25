@@ -487,3 +487,42 @@ class PaloAltoAPI:
             })
 
         return pd.DataFrame(hit_counts)
+
+    def show_config_running_match_rematch(self):
+        config_xml = self.get_config('running')
+        tree = ET.fromstring(config_xml)
+
+        result_text = tree.find("./result/config/devices/entry/deviceconfig/setting/config/rematch").text
+
+        if result_text:
+            return [f"rematch: {result_text}"]
+        else:
+            raise ValueError(f"결과값 없음")
+    
+    def run_command(self, command):
+        try:
+            params = (
+                ('type', 'op'),
+                ('cmd', command),
+                ('key', self.api_key)
+            )
+            response = self.get_api_data(params)
+            tree = ET.fromstring(response.text)
+
+            member_text = tree.findtext("./result/member")
+            if member_text:
+                return member_text.strip().splitlines()
+            
+            result_node = tree.find("./result")
+            if result_node is None:
+                return []
+            
+            children = list(result_node)
+            if children:
+                return [
+                    f"{child.tag}: {(child.text or '').strip()}"
+                    for child in children
+                ]
+            
+            result_text = (result_node.text or '').strip()
+            return result_text.splitlines() if result_text else []
