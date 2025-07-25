@@ -526,3 +526,6 @@ class PaloAltoAPI:
             
             result_text = (result_node.text or '').strip()
             return result_text.splitlines() if result_text else []
+        except Exception as e:
+            logging.error(f"명령어 실행 중 오류 발생: {e}")
+            return []
