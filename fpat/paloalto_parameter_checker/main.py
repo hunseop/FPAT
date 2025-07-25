@@ -11,7 +11,8 @@ else:
 
 sys.path.insert(0, str(base_dir))
 
-from firewall_module.paloalto import paloalto_module
+# 개선: 팩토리 패턴 사용으로 결합도 감소
+from fpat.firewall_module import FirewallCollectorFactory
 from paloalto_parameter_checker.parser import (
     load_expected_config, 
     parse_command_output, 
@@ -34,6 +35,26 @@ def setup_logging(verbose: bool = False):
         ]
     )
 
+def create_firewall_collector(hostname: str, username: str, password: str):
+    """
+    개선된 방화벽 컬렉터 생성 - 팩토리 패턴 사용
+    """
+    try:
+        # 팩토리를 통한 객체 생성으로 결합도 감소
+        collector = FirewallCollectorFactory.create(
+            vendor="paloalto",
+            hostname=hostname,
+            username=username,
+            password=password
+        )
+        return collector
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.error(f"방화벽 컬렉터 생성 실패: {e}")
+        # 폴백: 직접 생성
+        from firewall_module.paloalto import paloalto_module
+        return paloalto_module.PaloAltoAPI(hostname, username, password)
+
 def run_firewall_commands(collector, command_map) -> dict:
     logger = logging.getLogger(__name__)
     outputs = {}
@@ -44,7 +65,11 @@ def run_firewall_commands(collector, command_map) -> dict:
         
         if description == "show config running match rematch":
             try:
-                text = collector.show_config_running_match_rematch()
+                # 특수 메서드 확인 후 실행
+                if hasattr(collector, 'show_config_running_match_rematch'):
+                    text = collector.show_config_running_match_rematch()
+                else:
+                    text = collector.run_command(command)
                 outputs[description] = (text, True)
                 logger.debug(f"{description} 성공")
             except Exception as e:
@@ -134,13 +159,9 @@ def main():
         
         logger.info(f"설정 로드 완료: {len(expected_values)}개 파라미터")
 
-        # 방화벽 연결
+        # 방화벽 연결 - 개선된 팩토리 패턴 사용
         logger.info(f"방화벽 연결 중: {args.hostname}")
-        collector = paloalto_module.PaloAltoAPI(
-            hostname=args.hostname,
-            username=args.username,
-            password=args.password
-        )
+        collector = create_firewall_collector(args.hostname, args.username, args.password)
 
         # 명령어 실행
         logger.info("방화벽 명령어 실행 시작")
