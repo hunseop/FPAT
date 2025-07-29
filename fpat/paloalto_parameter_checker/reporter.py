@@ -11,23 +11,20 @@ logger = logging.getLogger(__name__)
 
 def save_report_to_excel(report: list, filename: str, hostname: str, yaml_path: str = None):
     """
-    개선된 엑셀 리포트 저장 함수 - 새로운 YAML 구조 정보 활용
+    개선된 엑셀 리포트 저장 함수 - 새로운 컬럼 구조와 명령어 정보 통합
     """
-    df = pd.DataFrame(report, columns=["항목", "상태", "현재값", "기대값"])
+    # 새로운 컬럼 구조: 항목, 현재값, 기대값, 상태, 확인 방법, 변경 방법
+    df = pd.DataFrame(report, columns=["항목", "현재값", "기대값", "상태", "확인 방법", "변경 방법"])
 
     tmp_filename = "_tmp_report.xlsx"
-    df.to_excel(tmp_filename, index=False, startrow=5, startcol=1)  # 상단 정보 공간 확대
+    df.to_excel(tmp_filename, index=False, startrow=4, startcol=1)  # 상단 정보 공간
 
     wb = load_workbook(tmp_filename)
     ws = wb.active
     ws.title = "점검결과"
 
-    # 상단 요약 정보 강화
+    # 상단 요약 정보
     _add_header_info(ws, hostname, report)
-    
-    # 새로운 YAML 구조가 있다면 추가 정보 포함
-    if yaml_path:
-        _add_parameter_info(ws, yaml_path, report)
 
     # 컬럼 폭 조정
     ws.column_dimensions["A"].width = 3.0
@@ -47,71 +44,26 @@ def save_report_to_excel(report: list, filename: str, hostname: str, yaml_path: 
     logger.info(f"리포트 저장 완료: {filename}")
 
 def _add_header_info(ws, hostname: str, report: list):
-    """상단 헤더 정보 추가"""
+    """상단 헤더 정보 추가 - 이모지와 성공률 제거"""
     ws["B1"] = f"점검일시: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     ws["B2"] = f"대상장비: {hostname}"
     
-    # 요약 통계 추가
+    # 요약 통계 추가 (이모지 제거)
     total = len(report)
-    matched = sum(1 for item in report if item[1] == "일치")
-    failed = sum(1 for item in report if item[1] == "명령어 실패")
-    mismatched = sum(1 for item in report if item[1] == "불일치")
-    missing = sum(1 for item in report if item[1] == "값 없음")
+    matched = sum(1 for item in report if item[3] == "일치")  # 상태 컬럼이 4번째로 변경
+    failed = sum(1 for item in report if item[3] == "명령어 실패")
+    mismatched = sum(1 for item in report if item[3] == "불일치")
+    missing = sum(1 for item in report if item[3] == "값 없음")
     
     ws["B3"] = f"점검 결과: 총 {total}개 항목"
-    ws["B4"] = f"✅ 정상: {matched}개 | ❌ 불일치: {mismatched}개 | ⚠️ 오류: {failed + missing}개"
-    
-    # 성공률 계산
-    success_rate = (matched / total * 100) if total > 0 else 0
-    ws["B5"] = f"성공률: {success_rate:.1f}%"
+    ws["B4"] = f"정상: {matched}개 | 불일치: {mismatched}개 | 오류: {failed + missing}개"
     
     # 폰트 스타일 적용
-    for row in range(1, 6):
+    for row in range(1, 5):
         ws[f"B{row}"].font = Font(bold=True)
 
-def _add_parameter_info(ws, yaml_path: str, report: list):
-    """새로운 YAML 구조에서 파라미터 상세 정보 추가"""
-    try:
-        from fpat.paloalto_parameter_checker.parser import get_parameter_details, get_cli_commands_from_config
-        
-        # CLI 명령어 정보가 있는 파라미터들 수집
-        cli_commands = get_cli_commands_from_config(yaml_path)
-        if not cli_commands:
-            return
-            
-        # 새로운 시트 생성
-        wb = ws.parent
-        cli_sheet = wb.create_sheet("CLI 명령어 참고")
-        
-        # CLI 시트 헤더
-        headers = ["파라미터", "설명", "조회 명령어", "수정 명령어"]
-        for col, header in enumerate(headers, 1):
-            cell = cli_sheet.cell(row=1, column=col, value=header)
-            cell.font = Font(bold=True)
-            cell.fill = PatternFill("solid", fgColor="DDDDDD")
-        
-        # CLI 명령어 정보 추가
-        row = 2
-        for param_name in [item[0] for item in report]:
-            if param_name in cli_commands:
-                details = get_parameter_details(yaml_path, param_name)
-                cli_info = cli_commands[param_name]
-                
-                cli_sheet.cell(row=row, column=1, value=param_name)
-                cli_sheet.cell(row=row, column=2, value=cli_info.get('description', ''))
-                cli_sheet.cell(row=row, column=3, value=cli_info.get('query_command', ''))
-                cli_sheet.cell(row=row, column=4, value=cli_info.get('modify_command', ''))
-                row += 1
-        
-        # CLI 시트 컬럼 너비 조정
-        for col in range(1, 5):
-            cli_sheet.column_dimensions[get_column_letter(col)].width = 20
-            
-    except Exception as e:
-        logger.warning(f"CLI 명령어 정보 추가 중 오류: {e}")
-
 def _style_headers(ws):
-    """헤더 스타일링"""
+    """헤더 스타일링 - 새로운 6개 컬럼에 맞게 조정"""
     header_fill = PatternFill("solid", fgColor="DDDDDD")
     header_font = Font(bold=True)
     border = Border(
@@ -121,15 +73,15 @@ def _style_headers(ws):
         bottom=Side(style="thin")
     )
 
-    for col_num in range(2, 6):  # B~E 컬럼
-        cell = ws.cell(row=6, column=col_num)  # 헤더 행 조정
+    for col_num in range(2, 8):  # B~G 컬럼 (6개 컬럼)
+        cell = ws.cell(row=5, column=col_num)  # 헤더 행 조정
         cell.fill = header_fill
         cell.font = header_font
         cell.alignment = Alignment(horizontal="center", vertical="center")
         cell.border = border
 
 def _style_data_rows(ws):
-    """데이터 행 스타일링"""
+    """데이터 행 스타일링 - 새로운 컬럼 구조에 맞게 조정"""
     status_color_map = {
         "일치": "C6EFCE",      # 연한 녹색
         "불일치": "FFC7CE",    # 연한 빨간색  
@@ -144,71 +96,79 @@ def _style_data_rows(ws):
         bottom=Side(style="thin")
     )
 
-    for row in ws.iter_rows(min_row=7, max_row=ws.max_row, min_col=2, max_col=5):
+    for row in ws.iter_rows(min_row=6, max_row=ws.max_row, min_col=2, max_col=7):  # 6개 컬럼
         for i, cell in enumerate(row):
-            if i != 0:  # 첫 번째 컬럼(항목)은 왼쪽 정렬
-                cell.alignment = Alignment(horizontal="center", vertical="center")
-            else:
+            if i == 0 or i == 4 or i == 5:  # 항목, 확인 방법, 변경 방법은 왼쪽 정렬
                 cell.alignment = Alignment(horizontal="left", vertical="center")
+            else:
+                cell.alignment = Alignment(horizontal="center", vertical="center")
             cell.border = border
         
-        # 상태 컬럼에 색상 적용
-        status = row[1].value
-        fill_color = status_color_map.get(status)
-        if fill_color:
-            row[1].fill = PatternFill("solid", fgColor=fill_color)
+        # 상태 컬럼(4번째, 인덱스 3)에 색상 적용
+        if len(row) > 3:
+            status = row[3].value
+            fill_color = status_color_map.get(status)
+            if fill_color:
+                row[3].fill = PatternFill("solid", fgColor=fill_color)
 
 def _adjust_column_widths(ws):
-    """컬럼 너비 자동 조정"""
-    for col in range(2, 6):  # B~E 컬럼
+    """컬럼 너비 자동 조정 - 6개 컬럼에 맞게 조정"""
+    # 각 컬럼별 적절한 기본 너비 설정
+    column_widths = {
+        2: 25,  # 항목
+        3: 20,  # 현재값
+        4: 20,  # 기대값
+        5: 12,  # 상태
+        6: 30,  # 확인 방법
+        7: 30   # 변경 방법
+    }
+    
+    for col in range(2, 8):  # B~G 컬럼
         max_len = 0
-        for row in range(6, ws.max_row + 1):
+        for row in range(5, ws.max_row + 1):
             cell_value = ws.cell(row=row, column=col).value
             if cell_value:
                 max_len = max(max_len, len(str(cell_value)))
         
         # 최소/최대 너비 제한
-        width = min(max(max_len + 4, 12), 50)
+        min_width = column_widths.get(col, 15)
+        width = min(max(max_len + 2, min_width), 50)
         ws.column_dimensions[get_column_letter(col)].width = width
 
 def generate_summary_report(report: list, hostname: str) -> str:
     """
-    요약 리포트 텍스트 생성
+    요약 리포트 텍스트 생성 - 이모지 제거
     """
     total = len(report)
-    matched = sum(1 for item in report if item[1] == "일치")
-    failed = sum(1 for item in report if item[1] == "명령어 실패")
-    mismatched = sum(1 for item in report if item[1] == "불일치")
-    missing = sum(1 for item in report if item[1] == "값 없음")
-    
-    success_rate = (matched / total * 100) if total > 0 else 0
+    matched = sum(1 for item in report if item[3] == "일치")  # 상태 컬럼이 4번째로 변경
+    failed = sum(1 for item in report if item[3] == "명령어 실패")
+    mismatched = sum(1 for item in report if item[3] == "불일치")
+    missing = sum(1 for item in report if item[3] == "값 없음")
     
     summary = f"""
 === Palo Alto 파라미터 점검 요약 ===
 점검 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 대상 장비: {hostname}
 
-📊 점검 결과:
+점검 결과:
 • 총 점검 항목: {total}개
-• ✅ 정상 (일치): {matched}개
-• ❌ 불일치: {mismatched}개  
-• ⚠️ 값 없음: {missing}개
-• 🚫 명령어 실패: {failed}개
+• 정상 (일치): {matched}개
+• 불일치: {mismatched}개  
+• 값 없음: {missing}개
+• 명령어 실패: {failed}개
 
-📈 성공률: {success_rate:.1f}%
-
-🔍 상세 결과:
+상세 결과:
 """
     
     for item in report:
-        status_emoji = {
-            "일치": "✅",
-            "불일치": "❌", 
-            "값 없음": "⚠️",
-            "명령어 실패": "🚫"
-        }.get(item[1], "❓")
+        status_prefix = {
+            "일치": "[정상]",
+            "불일치": "[불일치]", 
+            "값 없음": "[값없음]",
+            "명령어 실패": "[실패]"
+        }.get(item[3], "[알수없음]")
         
-        summary += f"{status_emoji} {item[0]}: {item[1]}\n"
+        summary += f"{status_prefix} {item[0]}: {item[3]}\n"
     
     return summary
 

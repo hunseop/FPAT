@@ -185,9 +185,9 @@ def main():
                     if key:
                         failed_keys.add(key)
         
-        # 비교 및 리포트 생성
+        # 비교 및 리포트 생성 (yaml_path 매개변수 추가)
         logger.info("결과 비교 및 리포트 생성 중...")
-        report = compare_with_expected(parsed, expected_values, failed_keys)
+        report = compare_with_expected(parsed, expected_values, failed_keys, str(yaml_path))
         
         # 파일 저장
         from datetime import datetime
@@ -206,10 +206,10 @@ def main():
             if text_file:
                 print(f"텍스트 요약: {text_file} 저장됨")
         
-        # 콘솔 요약 출력
+        # 콘솔 요약 출력 (상태 컬럼이 4번째로 변경됨)
         total = len(report)
-        matched = sum(1 for item in report if item[1] == "일치")
-        print(f"\n📊 점검 요약: 총 {total}개 중 {matched}개 정상 ({matched/total*100:.1f}%)")
+        matched = sum(1 for item in report if item[3] == "일치")
+        print(f"\n점검 요약: 총 {total}개 중 {matched}개 정상 ({matched/total*100:.1f}%)")
         
     except Exception as e:
         logger.error(f"점검 중 오류 발생: {e}")

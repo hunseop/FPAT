@@ -157,48 +157,63 @@ def parse_command_output(output: str, prefix_map: dict) -> dict:
     
     return result
 
-def compare_with_expected(parsed: dict, expected: dict, failed_keys: set) -> list:
+def compare_with_expected(parsed: dict, expected: dict, failed_keys: set, yaml_path: str = None) -> list:
     """
-    개선된 비교 함수 - 더 상세한 상태 정보 제공
+    개선된 비교 함수 - 새로운 6개 컬럼 구조로 리포트 생성
+    컬럼: 항목, 현재값, 기대값, 상태, 확인 방법, 변경 방법
     """
     report = []
+    
+    # CLI 명령어 정보 가져오기
+    cli_commands = {}
+    if yaml_path:
+        try:
+            cli_commands = get_cli_commands_from_config(yaml_path)
+        except Exception as e:
+            logger.warning(f"CLI 명령어 정보 로드 실패: {e}")
     
     for key, exp_value in expected.items():
         exp_value = str(exp_value)
         actual_values = parsed.get(key)
+        
+        # CLI 명령어 정보 가져오기
+        cli_info = cli_commands.get(key, {})
+        query_cmd = cli_info.get('query_command', '')
+        modify_cmd = cli_info.get('modify_command', '')
 
         # 1. 명령어 자체 실패
         if key in failed_keys:
-            report.append((key, "명령어 실패", "없음", exp_value))
+            report.append((key, "없음", exp_value, "명령어 실패", query_cmd, modify_cmd))
             logger.warning(f"명령어 실패: {key}")
             continue
         
         # 2. 응답에서 값을 찾을 수 없음
         if actual_values is None:
-            report.append((key, "값 없음", "없음", exp_value))
+            report.append((key, "없음", exp_value, "값 없음", query_cmd, modify_cmd))
             logger.warning(f"값 없음: {key}")
             continue
         
         # 3. 값 비교
         if isinstance(actual_values, list):
+            current_value = ", ".join(actual_values)
             if all(v == exp_value for v in actual_values):
-                report.append((key, "일치", ", ".join(actual_values), exp_value))
+                report.append((key, current_value, exp_value, "일치", query_cmd, modify_cmd))
                 logger.info(f"일치: {key} = {exp_value}")
             else:
-                report.append((key, "불일치", ", ".join(actual_values), exp_value))
+                report.append((key, current_value, exp_value, "불일치", query_cmd, modify_cmd))
                 logger.warning(f"불일치: {key} - 현재: {actual_values}, 기대: {exp_value}")
         else:
             actual_values = str(actual_values)
             if actual_values == exp_value:
-                report.append((key, "일치", actual_values, exp_value))
+                report.append((key, actual_values, exp_value, "일치", query_cmd, modify_cmd))
                 logger.info(f"일치: {key} = {exp_value}")
             else:
-                report.append((key, "불일치", actual_values, exp_value))
+                report.append((key, actual_values, exp_value, "불일치", query_cmd, modify_cmd))
                 logger.warning(f"불일치: {key} - 현재: {actual_values}, 기대: {exp_value}")
     
-    # 요약 통계
+    # 요약 통계 (상태는 4번째 컬럼)
     total = len(report)
-    matched = sum(1 for item in report if item[1] == "일치")
+    matched = sum(1 for item in report if item[3] == "일치")
     logger.info(f"비교 완료: 총 {total}개 중 {matched}개 일치 ({matched/total*100:.1f}%)")
     
     return report
