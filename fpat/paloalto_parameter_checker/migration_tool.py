@@ -164,7 +164,7 @@ def validate_migration(original_path: str, migrated_path: str) -> bool:
     마이그레이션된 파일이 원본과 동일한 동작을 하는지 검증
     """
     try:
-        from fpat.paloalto_parameter_checker.parser import load_expected_config
+        from paloalto_parameter_checker.parser import load_expected_config
         
         # 원본 파일 로드 (기존 구조)
         original_config = load_expected_config(original_path)

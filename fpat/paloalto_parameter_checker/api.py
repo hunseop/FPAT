@@ -19,7 +19,11 @@ from .parser import (
     compare_with_expected,
     get_cli_commands_from_config,
     get_parameter_details,
-    list_all_parameters
+    list_all_parameters,
+    get_prefix_map,
+    get_expected_values,
+    get_command_map,
+    get_command_prefix_map
 )
 from .reporter import save_report_to_excel, save_text_summary
 
@@ -107,13 +111,15 @@ async def check_parameters(credentials: FirewallCredentials):
     yaml_path = base_dir / "parameters.yaml"
     
     try:
-        # 설정 로드
+        # 설정 로드 - 새로운 구조만 지원
         logger.info("설정 파일 로딩 중...")
         config = load_expected_config(yaml_path)
-        prefix_map = config["prefix_map"]
-        expected_values = config["expected_values"]
-        command_prefix_map = config["command_prefix_map"]
-        command_map = config["command_map"]
+        
+        # 새로운 구조에서 필요한 정보 추출
+        prefix_map = get_prefix_map(config)
+        expected_values = get_expected_values(config)
+        command_prefix_map = get_command_prefix_map(config)
+        command_map = get_command_map(config)
         
         # 방화벽 연결
         collector = create_firewall_collector(
@@ -142,8 +148,8 @@ async def check_parameters(credentials: FirewallCredentials):
                     if key:
                         failed_keys.add(key)
         
-        # 비교 및 리포트 생성
-        report = compare_with_expected(parsed, expected_values, failed_keys)
+        # 비교 및 리포트 생성 (yaml_path 매개변수 추가)
+        report = compare_with_expected(parsed, expected_values, failed_keys, str(yaml_path))
         
         # 파일 저장
         from datetime import datetime

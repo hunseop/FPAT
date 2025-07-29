@@ -19,7 +19,11 @@ from paloalto_parameter_checker.parser import (
     compare_with_expected,
     get_cli_commands_from_config,
     get_parameter_details,
-    list_all_parameters
+    list_all_parameters,
+    get_prefix_map,
+    get_expected_values,
+    get_command_map,
+    get_command_prefix_map
 )
 from paloalto_parameter_checker.reporter import save_report_to_excel, save_text_summary
 
@@ -93,7 +97,7 @@ def print_parameter_info(yaml_path):
     logger = logging.getLogger(__name__)
     try:
         params = list_all_parameters(yaml_path)
-        print(f"\n📋 점검 대상 파라미터 총 {len(params)}개:")
+        print(f"\n점검 대상 파라미터 총 {len(params)}개:")
         
         for param_name in params:
             details = get_parameter_details(yaml_path, param_name)
@@ -112,7 +116,7 @@ def print_cli_commands_info(yaml_path):
     try:
         cli_commands = get_cli_commands_from_config(yaml_path)
         if cli_commands:
-            print("📝 CLI 명령어 참고 정보:")
+            print("CLI 명령어 참고 정보:")
             for param_name, commands in cli_commands.items():
                 if commands['query_command'] or commands['modify_command']:
                     print(f"  • {param_name}:")
@@ -149,13 +153,15 @@ def main():
         print_cli_commands_info(yaml_path)
 
     try:
-        # 설정 로드
+        # 설정 로드 - 새로운 구조만 지원
         logger.info("설정 파일 로딩 중...")
         config = load_expected_config(yaml_path)
-        prefix_map = config["prefix_map"]
-        expected_values = config["expected_values"]
-        command_prefix_map = config["command_prefix_map"]
-        command_map = config["command_map"]
+        
+        # 새로운 구조에서 필요한 정보 추출
+        prefix_map = get_prefix_map(config)
+        expected_values = get_expected_values(config)
+        command_prefix_map = get_command_prefix_map(config)
+        command_map = get_command_map(config)
         
         logger.info(f"설정 로드 완료: {len(expected_values)}개 파라미터")
 
@@ -185,9 +191,9 @@ def main():
                     if key:
                         failed_keys.add(key)
         
-        # 비교 및 리포트 생성
+        # 비교 및 리포트 생성 (yaml_path 매개변수 추가)
         logger.info("결과 비교 및 리포트 생성 중...")
-        report = compare_with_expected(parsed, expected_values, failed_keys)
+        report = compare_with_expected(parsed, expected_values, failed_keys, str(yaml_path))
         
         # 파일 저장
         from datetime import datetime
@@ -206,10 +212,10 @@ def main():
             if text_file:
                 print(f"텍스트 요약: {text_file} 저장됨")
         
-        # 콘솔 요약 출력
+        # 콘솔 요약 출력 (상태 컬럼이 4번째로 변경됨)
         total = len(report)
-        matched = sum(1 for item in report if item[1] == "일치")
-        print(f"\n📊 점검 요약: 총 {total}개 중 {matched}개 정상 ({matched/total*100:.1f}%)")
+        matched = sum(1 for item in report if item[3] == "일치")
+        print(f"\n점검 요약: 총 {total}개 중 {matched}개 정상 ({matched/total*100:.1f}%)")
         
     except Exception as e:
         logger.error(f"점검 중 오류 발생: {e}")
