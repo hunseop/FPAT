@@ -23,7 +23,8 @@ from .parser import (
     get_prefix_map,
     get_expected_values,
     get_command_map,
-    get_command_prefix_map
+    get_command_prefix_map,
+    validate_duplicate_commands
 )
 from .reporter import save_report_to_excel, save_text_summary
 
@@ -199,5 +200,17 @@ async def get_parameter_detail(param_name: str):
         if not details:
             raise HTTPException(status_code=404, detail="Parameter not found")
         return details
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/validate-duplicates")
+async def validate_duplicates():
+    """중복된 API 명령어 검증 API 엔드포인트"""
+    yaml_path = base_dir / "parameters.yaml"
+    try:
+        result = validate_duplicate_commands(yaml_path)
+        if 'error' in result:
+            raise HTTPException(status_code=400, detail=result['error'])
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 
