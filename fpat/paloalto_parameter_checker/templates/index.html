@@ -4,846 +4,495 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Palo Alto Parameter Checker</title>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='bootstrap.min.css') }}" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .app-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            overflow: hidden;
-        }
-
-        .header {
+        .header-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 30px;
-            text-align: center;
+            padding: 30px 0;
         }
-
-        .header h1 {
-            font-size: 32px;
-            margin-bottom: 10px;
-            font-weight: 300;
-        }
-
-        .header p {
-            opacity: 0.9;
-            font-size: 16px;
-        }
-
-        .main-content {
-            padding: 30px;
-        }
-
-        .connection-section {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 25px;
-            margin-bottom: 30px;
-            border: 1px solid #e9ecef;
-        }
-
-        .connection-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: #495057;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .form-group label {
-            font-weight: 500;
-            margin-bottom: 5px;
-            color: #495057;
-        }
-
-        .form-group input {
-            padding: 10px 12px;
-            border: 1px solid #ced4da;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: border-color 0.2s;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #5a6fd8;
-            transform: translateY(-1px);
-        }
-
-        .btn-success {
-            background: #28a745;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #218838;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-        }
-
-        .status-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 500;
-            text-transform: uppercase;
-        }
-
         .status-connected {
-            background: #d4edda;
-            color: #155724;
+            color: #28a745;
         }
-
         .status-disconnected {
-            background: #f8d7da;
-            color: #721c24;
+            color: #dc3545;
         }
-
-        .parameters-section {
-            margin-bottom: 30px;
-        }
-
-        .section-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: #495057;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .parameters-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
         .parameter-card {
-            background: white;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            padding: 15px;
             cursor: pointer;
             transition: all 0.2s;
         }
-
         .parameter-card:hover {
-            border-color: #667eea;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+            border-color: #007bff !important;
+            box-shadow: 0 2px 8px rgba(0,123,255,0.2);
         }
-
         .parameter-card.selected {
-            border-color: #667eea;
-            background: #f8f9ff;
+            border-color: #007bff !important;
+            background-color: #f8f9ff;
         }
-
-        .parameter-card h4 {
-            color: #495057;
-            margin-bottom: 8px;
-            font-size: 16px;
-        }
-
-        .parameter-card p {
-            color: #6c757d;
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-
-        .parameter-card .expected-value {
-            font-size: 12px;
-            color: #28a745;
-            font-weight: 500;
-        }
-
-        .results-section {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 25px;
-            margin-bottom: 30px;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .stat-number {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: #6c757d;
-            text-transform: uppercase;
-        }
-
-        .stat-total { color: #007bff; }
-        .stat-pass { color: #28a745; }
-        .stat-fail { color: #dc3545; }
-        .stat-error { color: #ffc107; }
-
-        .results-table {
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #495057;
-        }
-
-        .status-badge {
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 500;
-            text-transform: uppercase;
-        }
-
         .status-pass {
-            background: #d4edda;
+            background-color: #d4edda;
             color: #155724;
         }
-
         .status-fail {
-            background: #f8d7da;
+            background-color: #f8d7da;
             color: #721c24;
         }
-
         .status-error {
-            background: #fff3cd;
+            background-color: #fff3cd;
             color: #856404;
         }
-
+        .loading-spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .hidden {
+            display: none;
+        }
         .command-text {
             font-family: 'Courier New', monospace;
             font-size: 12px;
             background: #f8f9fa;
             padding: 4px 8px;
             border-radius: 4px;
-            max-width: 250px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .alert {
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-        }
-
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .alert-danger {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .alert-info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
-
-        .loading-spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .report-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 20px;
-        }
-
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            margin-bottom: 20px;
-        }
-
-        .modal-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: #495057;
-        }
-
-        .modal-close {
-            float: right;
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: #6c757d;
-        }
-
-        .fade-enter-active, .fade-leave-active {
-            transition: opacity 0.3s;
-        }
-
-        .fade-enter-from, .fade-leave-to {
-            opacity: 0;
-        }
-
-        @media (max-width: 768px) {
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .parameters-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .main-content {
-                padding: 20px;
-            }
+            word-break: break-all;
         }
     </style>
 </head>
 <body>
-    <div id="app">
-        <div class="app-container">
-            <div class="header">
-                <h1><i class="fas fa-shield-alt"></i> Palo Alto Parameter Checker</h1>
-                <p>SSH 기반 보안 매개변수 점검 시스템</p>
+    <!-- 헤더 -->
+    <div class="header-bg text-center">
+        <h1 class="mb-2">🛡️ Palo Alto Parameter Checker</h1>
+        <p class="mb-0">SSH 기반 보안 매개변수 점검 시스템</p>
+    </div>
+
+    <div class="container mt-4">
+        <!-- 연결 설정 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    🔌 SSH 연결 설정
+                    <span id="connectionStatus" class="badge ms-2"></span>
+                </h5>
             </div>
-
-            <div class="main-content">
-                <!-- 연결 설정 섹션 -->
-                <div class="connection-section">
-                    <div class="connection-title">
-                        <i class="fas fa-network-wired"></i>
-                        SSH 연결 설정
-                        <div v-if="connection.status" :class="'status-indicator status-' + connection.status">
-                            <i :class="connection.status === 'connected' ? 'fas fa-check-circle' : 'fas fa-times-circle'"></i>
-                            {{ connection.status === 'connected' ? '연결됨' : '연결 안됨' }}
-                        </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label for="host" class="form-label">호스트</label>
+                        <input type="text" class="form-control" id="host" placeholder="192.168.1.1">
                     </div>
-
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="host">호스트</label>
-                            <input type="text" id="host" v-model="connection.host" 
-                                   placeholder="192.168.1.1" :disabled="loading.connect">
-                        </div>
-                        <div class="form-group">
-                            <label for="username">사용자명</label>
-                            <input type="text" id="username" v-model="connection.username" 
-                                   placeholder="admin" :disabled="loading.connect">
-                        </div>
-                        <div class="form-group">
-                            <label for="password">비밀번호</label>
-                            <input type="password" id="password" v-model="connection.password" 
-                                   placeholder="********" :disabled="loading.connect">
-                        </div>
-                        <div class="form-group">
-                            <label for="port">포트</label>
-                            <input type="number" id="port" v-model="connection.port" 
-                                   placeholder="22" :disabled="loading.connect">
-                        </div>
+                    <div class="col-md-3">
+                        <label for="username" class="form-label">사용자명</label>
+                        <input type="text" class="form-control" id="username" placeholder="admin">
                     </div>
-
-                    <button class="btn btn-primary" @click="connect" :disabled="loading.connect || !isConnectionFormValid">
-                        <span v-if="loading.connect" class="loading-spinner"></span>
-                        <i v-else class="fas fa-plug"></i>
-                        {{ loading.connect ? '연결 중...' : '연결' }}
+                    <div class="col-md-3">
+                        <label for="password" class="form-label">비밀번호</label>
+                        <input type="password" class="form-control" id="password" placeholder="********">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="port" class="form-label">포트</label>
+                        <input type="number" class="form-control" id="port" value="22">
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-primary" onclick="connect()" id="connectBtn">
+                        🔗 연결
                     </button>
-                </div>
-
-                <!-- 알림 메시지 -->
-                <div v-if="alert.show" :class="'alert alert-' + alert.type">
-                    <i :class="alertIcon"></i>
-                    {{ alert.message }}
-                </div>
-
-                <!-- 매개변수 선택 섹션 -->
-                <div v-if="connection.status === 'connected'" class="parameters-section">
-                    <div class="section-title">
-                        <i class="fas fa-cogs"></i>
-                        점검 매개변수 선택
-                        <button class="btn btn-secondary" @click="selectAllParameters">
-                            <i class="fas fa-check-double"></i>
-                            전체 선택
-                        </button>
-                        <button class="btn btn-secondary" @click="clearAllParameters">
-                            <i class="fas fa-times"></i>
-                            전체 해제
-                        </button>
-                    </div>
-
-                    <div class="parameters-grid">
-                        <div v-for="param in availableParameters" :key="param.name"
-                             :class="['parameter-card', { selected: selectedParameters.includes(param.name) }]"
-                             @click="toggleParameter(param.name)">
-                            <h4>{{ param.name }}</h4>
-                            <p>{{ param.description }}</p>
-                            <div class="expected-value">
-                                기대값: {{ formatExpectedValue(param.expected_value) }}
-                            </div>
-                        </div>
-                    </div>
-
-                    <button class="btn btn-success" @click="checkParameters" 
-                            :disabled="loading.check || selectedParameters.length === 0">
-                        <span v-if="loading.check" class="loading-spinner"></span>
-                        <i v-else class="fas fa-search"></i>
-                        {{ loading.check ? '점검 중...' : '점검 실행' }}
-                    </button>
-                </div>
-
-                <!-- 결과 섹션 -->
-                <div v-if="results.length > 0" class="results-section">
-                    <div class="section-title">
-                        <i class="fas fa-chart-line"></i>
-                        점검 결과
-                    </div>
-
-                    <!-- 통계 -->
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-number stat-total">{{ stats.total_count }}</div>
-                            <div class="stat-label">전체</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number stat-pass">{{ stats.pass_count }}</div>
-                            <div class="stat-label">정상</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number stat-fail">{{ stats.fail_count }}</div>
-                            <div class="stat-label">비정상</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number stat-error">{{ stats.error_count }}</div>
-                            <div class="stat-label">오류</div>
-                        </div>
-                    </div>
-
-                    <!-- 결과 테이블 -->
-                    <div class="results-table">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>항목</th>
-                                    <th>설명</th>
-                                    <th>기대값</th>
-                                    <th>현재값</th>
-                                    <th>상태</th>
-                                    <th>확인방법</th>
-                                    <th>변경방법</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="result in results" :key="result.name">
-                                    <td><strong>{{ result.name }}</strong></td>
-                                    <td>{{ result.description }}</td>
-                                    <td>{{ formatValue(result.expected_value) }}</td>
-                                    <td>{{ formatValue(result.current_value) }}</td>
-                                    <td>
-                                        <span :class="'status-badge status-' + result.status">
-                                            {{ getStatusText(result.status) }}
-                                        </span>
-                                    </td>
-                                    <td class="command-text" :title="result.query_command">
-                                        {{ result.query_command }}
-                                    </td>
-                                    <td class="command-text" :title="result.modify_command">
-                                        {{ result.modify_command }}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- 리포트 생성 -->
-                    <div class="report-actions">
-                        <button class="btn btn-primary" @click="generateReport('html')" :disabled="loading.report">
-                            <span v-if="loading.report" class="loading-spinner"></span>
-                            <i v-else class="fas fa-file-code"></i>
-                            HTML 리포트
-                        </button>
-                        <button class="btn btn-success" @click="generateReport('csv')" :disabled="loading.report">
-                            <span v-if="loading.report" class="loading-spinner"></span>
-                            <i v-else class="fas fa-file-csv"></i>
-                            CSV 리포트
-                        </button>
-                        <button class="btn btn-secondary" @click="generateReport('json')" :disabled="loading.report">
-                            <span v-if="loading.report" class="loading-spinner"></span>
-                            <i v-else class="fas fa-file-code"></i>
-                            JSON 리포트
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- 모달 -->
-        <transition name="fade">
-            <div v-if="modal.show" class="modal" @click="closeModal">
-                <div class="modal-content" @click.stop>
-                    <div class="modal-header">
-                        <button class="modal-close" @click="closeModal">&times;</button>
-                        <h3 class="modal-title">{{ modal.title }}</h3>
+        <!-- 알림 -->
+        <div id="alertContainer"></div>
+
+        <!-- 매개변수 선택 -->
+        <div class="card mb-4 hidden" id="parametersSection">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">⚙️ 점검 매개변수 선택</h5>
+                <div>
+                    <button class="btn btn-sm btn-secondary me-2" onclick="selectAllParameters()">전체 선택</button>
+                    <button class="btn btn-sm btn-secondary" onclick="clearAllParameters()">전체 해제</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row" id="parametersGrid"></div>
+                <div class="mt-3">
+                    <button class="btn btn-success" onclick="checkParameters()" id="checkBtn">
+                        🔍 점검 실행
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 결과 -->
+        <div class="card mb-4 hidden" id="resultsSection">
+            <div class="card-header">
+                <h5 class="mb-0">📊 점검 결과</h5>
+            </div>
+            <div class="card-body">
+                <!-- 통계 -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body text-center">
+                                <h4 id="totalCount">0</h4>
+                                <p class="mb-0">전체</p>
+                            </div>
+                        </div>
                     </div>
-                    <div class="modal-body">
-                        <p>{{ modal.message }}</p>
-                        <div v-if="modal.download_url" style="margin-top: 15px;">
-                            <a :href="modal.download_url" class="btn btn-primary" download>
-                                <i class="fas fa-download"></i>
-                                다운로드
-                            </a>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <h4 id="passCount">0</h4>
+                                <p class="mb-0">정상</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-danger text-white">
+                            <div class="card-body text-center">
+                                <h4 id="failCount">0</h4>
+                                <p class="mb-0">비정상</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body text-center">
+                                <h4 id="errorCount">0</h4>
+                                <p class="mb-0">오류</p>
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- 결과 테이블 -->
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>항목</th>
+                                <th>설명</th>
+                                <th>기대값</th>
+                                <th>현재값</th>
+                                <th>상태</th>
+                                <th>확인방법</th>
+                                <th>변경방법</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsTable"></tbody>
+                    </table>
+                </div>
+
+                <!-- 리포트 생성 -->
+                <div class="mt-3">
+                    <button class="btn btn-info me-2" onclick="generateReport('html')">
+                        📄 HTML 리포트
+                    </button>
+                    <button class="btn btn-success me-2" onclick="generateReport('csv')">
+                        📊 CSV 리포트
+                    </button>
+                    <button class="btn btn-secondary" onclick="generateReport('json')">
+                        📋 JSON 리포트
+                    </button>
+                </div>
             </div>
-        </transition>
+        </div>
     </div>
 
+    <!-- 모달 -->
+    <div class="modal fade" id="reportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">리포트 생성 완료</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="reportMessage"></p>
+                    <a id="downloadLink" class="btn btn-primary" style="display: none;" download>
+                        📥 다운로드
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='bootstrap.bundle.min.js') }}"></script>
     <script>
-        const { createApp } = Vue;
+        let isConnected = false;
+        let availableParameters = [];
+        let selectedParameters = [];
+        let checkResults = [];
 
-        createApp({
-            data() {
-                return {
-                    connection: {
-                        host: '',
-                        username: '',
-                        password: '',
-                        port: 22,
-                        status: null
-                    },
-                    loading: {
-                        connect: false,
-                        check: false,
-                        report: false
-                    },
-                    alert: {
-                        show: false,
-                        type: 'info',
-                        message: ''
-                    },
-                    modal: {
-                        show: false,
-                        title: '',
-                        message: '',
-                        download_url: null
-                    },
-                    availableParameters: [],
-                    selectedParameters: [],
-                    results: [],
-                    stats: {
-                        total_count: 0,
-                        pass_count: 0,
-                        fail_count: 0,
-                        error_count: 0
-                    }
-                }
-            },
-            computed: {
-                isConnectionFormValid() {
-                    return this.connection.host && 
-                           this.connection.username && 
-                           this.connection.password;
-                },
-                alertIcon() {
-                    const icons = {
-                        success: 'fas fa-check-circle',
-                        danger: 'fas fa-exclamation-triangle',
-                        info: 'fas fa-info-circle'
-                    };
-                    return icons[this.alert.type] || 'fas fa-info-circle';
-                }
-            },
-            methods: {
-                async connect() {
-                    this.loading.connect = true;
-                    
-                    try {
-                        const response = await axios.post('/api/connect', {
-                            host: this.connection.host,
-                            username: this.connection.username,
-                            password: this.connection.password,
-                            port: this.connection.port
-                        });
+        // 연결 함수
+        async function connect() {
+            const host = document.getElementById('host').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const port = document.getElementById('port').value;
 
-                        if (response.data.success) {
-                            this.connection.status = 'connected';
-                            this.showAlert('success', 'SSH 연결이 성공했습니다.');
-                            await this.loadParameters();
-                        }
-                    } catch (error) {
-                        this.connection.status = 'disconnected';
-                        this.showAlert('danger', error.response?.data?.error || '연결에 실패했습니다.');
-                    } finally {
-                        this.loading.connect = false;
-                    }
-                },
-
-                async loadParameters() {
-                    try {
-                        const response = await axios.get('/api/parameters');
-                        this.availableParameters = response.data.parameters;
-                    } catch (error) {
-                        this.showAlert('danger', '매개변수 목록을 불러오는데 실패했습니다.');
-                    }
-                },
-
-                toggleParameter(paramName) {
-                    const index = this.selectedParameters.indexOf(paramName);
-                    if (index > -1) {
-                        this.selectedParameters.splice(index, 1);
-                    } else {
-                        this.selectedParameters.push(paramName);
-                    }
-                },
-
-                selectAllParameters() {
-                    this.selectedParameters = this.availableParameters.map(p => p.name);
-                },
-
-                clearAllParameters() {
-                    this.selectedParameters = [];
-                },
-
-                async checkParameters() {
-                    if (this.selectedParameters.length === 0) {
-                        this.showAlert('danger', '점검할 매개변수를 선택해주세요.');
-                        return;
-                    }
-
-                    this.loading.check = true;
-
-                    try {
-                        const response = await axios.post('/api/check', {
-                            parameters: this.selectedParameters
-                        });
-
-                        if (response.data.success) {
-                            this.results = response.data.results;
-                            this.stats = {
-                                total_count: response.data.total_count,
-                                pass_count: response.data.pass_count,
-                                fail_count: response.data.fail_count,
-                                error_count: response.data.error_count
-                            };
-                            this.showAlert('success', `점검이 완료되었습니다. (${this.stats.total_count}개 항목)`);
-                        }
-                    } catch (error) {
-                        this.showAlert('danger', error.response?.data?.error || '점검에 실패했습니다.');
-                    } finally {
-                        this.loading.check = false;
-                    }
-                },
-
-                async generateReport(format) {
-                    if (this.results.length === 0) {
-                        this.showAlert('danger', '생성할 리포트 데이터가 없습니다.');
-                        return;
-                    }
-
-                    this.loading.report = true;
-
-                    try {
-                        const response = await axios.post('/api/report/generate', {
-                            results: this.results,
-                            format: format
-                        });
-
-                        if (response.data.success) {
-                            this.modal = {
-                                show: true,
-                                title: '리포트 생성 완료',
-                                message: `${format.toUpperCase()} 리포트가 성공적으로 생성되었습니다.`,
-                                download_url: response.data.download_url
-                            };
-                        }
-                    } catch (error) {
-                        this.showAlert('danger', error.response?.data?.error || '리포트 생성에 실패했습니다.');
-                    } finally {
-                        this.loading.report = false;
-                    }
-                },
-
-                showAlert(type, message) {
-                    this.alert = {
-                        show: true,
-                        type: type,
-                        message: message
-                    };
-                    
-                    setTimeout(() => {
-                        this.alert.show = false;
-                    }, 5000);
-                },
-
-                closeModal() {
-                    this.modal.show = false;
-                },
-
-                formatValue(value) {
-                    if (Array.isArray(value)) {
-                        return value.join(', ');
-                    }
-                    return value || '-';
-                },
-
-                formatExpectedValue(value) {
-                    if (Array.isArray(value)) {
-                        return value.join(', ');
-                    }
-                    return value || '-';
-                },
-
-                getStatusText(status) {
-                    const statusMap = {
-                        pass: '정상',
-                        fail: '비정상',
-                        error: '오류',
-                        unknown: '알 수 없음'
-                    };
-                    return statusMap[status] || '알 수 없음';
-                }
-            },
-
-            mounted() {
-                // 초기화 로직
-                console.log('Palo Alto Parameter Checker 초기화 완료');
+            if (!host || !username || !password) {
+                showAlert('호스트, 사용자명, 비밀번호는 필수입니다.', 'danger');
+                return;
             }
-        }).mount('#app');
+
+            const connectBtn = document.getElementById('connectBtn');
+            connectBtn.innerHTML = '<span class="loading-spinner"></span> 연결 중...';
+            connectBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ host, username, password, port: parseInt(port) })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    isConnected = true;
+                    updateConnectionStatus(true);
+                    showAlert('SSH 연결이 성공했습니다.', 'success');
+                    await loadParameters();
+                } else {
+                    isConnected = false;
+                    updateConnectionStatus(false);
+                    showAlert(result.error || '연결에 실패했습니다.', 'danger');
+                }
+            } catch (error) {
+                isConnected = false;
+                updateConnectionStatus(false);
+                showAlert('연결 오류가 발생했습니다.', 'danger');
+            }
+
+            connectBtn.innerHTML = '🔗 연결';
+            connectBtn.disabled = false;
+        }
+
+        // 연결 상태 업데이트
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connectionStatus');
+            if (connected) {
+                statusElement.textContent = '연결됨';
+                statusElement.className = 'badge bg-success ms-2';
+            } else {
+                statusElement.textContent = '연결 안됨';
+                statusElement.className = 'badge bg-danger ms-2';
+            }
+        }
+
+        // 매개변수 로드
+        async function loadParameters() {
+            try {
+                const response = await fetch('/api/parameters');
+                const result = await response.json();
+                availableParameters = result.parameters;
+                renderParameters();
+                document.getElementById('parametersSection').classList.remove('hidden');
+            } catch (error) {
+                showAlert('매개변수 목록을 불러오는데 실패했습니다.', 'danger');
+            }
+        }
+
+        // 매개변수 렌더링
+        function renderParameters() {
+            const grid = document.getElementById('parametersGrid');
+            grid.innerHTML = '';
+
+            availableParameters.forEach(param => {
+                const col = document.createElement('div');
+                col.className = 'col-md-6 col-lg-4 mb-3';
+                
+                const isSelected = selectedParameters.includes(param.name);
+                const expectedValue = Array.isArray(param.expected_value) 
+                    ? param.expected_value.join(', ') 
+                    : param.expected_value;
+
+                col.innerHTML = `
+                    <div class="card parameter-card ${isSelected ? 'selected' : ''}" 
+                         onclick="toggleParameter('${param.name}')" style="border: 2px solid #dee2e6;">
+                        <div class="card-body">
+                            <h6 class="card-title">${param.name}</h6>
+                            <p class="card-text small">${param.description}</p>
+                            <small class="text-success">기대값: ${expectedValue}</small>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(col);
+            });
+        }
+
+        // 매개변수 선택 토글
+        function toggleParameter(paramName) {
+            const index = selectedParameters.indexOf(paramName);
+            if (index > -1) {
+                selectedParameters.splice(index, 1);
+            } else {
+                selectedParameters.push(paramName);
+            }
+            renderParameters();
+        }
+
+        // 전체 선택
+        function selectAllParameters() {
+            selectedParameters = availableParameters.map(p => p.name);
+            renderParameters();
+        }
+
+        // 전체 해제
+        function clearAllParameters() {
+            selectedParameters = [];
+            renderParameters();
+        }
+
+        // 매개변수 점검
+        async function checkParameters() {
+            if (selectedParameters.length === 0) {
+                showAlert('점검할 매개변수를 선택해주세요.', 'warning');
+                return;
+            }
+
+            const checkBtn = document.getElementById('checkBtn');
+            checkBtn.innerHTML = '<span class="loading-spinner"></span> 점검 중...';
+            checkBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ parameters: selectedParameters })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    checkResults = result.results;
+                    renderResults(result);
+                    document.getElementById('resultsSection').classList.remove('hidden');
+                    showAlert(`점검이 완료되었습니다. (${result.total_count}개 항목)`, 'success');
+                } else {
+                    showAlert(result.error || '점검에 실패했습니다.', 'danger');
+                }
+            } catch (error) {
+                showAlert('점검 오류가 발생했습니다.', 'danger');
+            }
+
+            checkBtn.innerHTML = '🔍 점검 실행';
+            checkBtn.disabled = false;
+        }
+
+        // 결과 렌더링
+        function renderResults(result) {
+            // 통계 업데이트
+            document.getElementById('totalCount').textContent = result.total_count;
+            document.getElementById('passCount').textContent = result.pass_count;
+            document.getElementById('failCount').textContent = result.fail_count;
+            document.getElementById('errorCount').textContent = result.error_count;
+
+            // 테이블 업데이트
+            const tbody = document.getElementById('resultsTable');
+            tbody.innerHTML = '';
+
+            result.results.forEach(item => {
+                const row = document.createElement('tr');
+                const statusText = getStatusText(item.status);
+                const statusClass = `status-${item.status}`;
+                const expectedValue = Array.isArray(item.expected_value) 
+                    ? item.expected_value.join(', ') 
+                    : item.expected_value || '-';
+                const currentValue = Array.isArray(item.current_value) 
+                    ? item.current_value.join(', ') 
+                    : item.current_value || '-';
+
+                row.innerHTML = `
+                    <td><strong>${item.name}</strong></td>
+                    <td>${item.description}</td>
+                    <td>${expectedValue}</td>
+                    <td>${currentValue}</td>
+                    <td><span class="badge ${statusClass}">${statusText}</span></td>
+                    <td><div class="command-text">${item.query_command}</div></td>
+                    <td><div class="command-text">${item.modify_command}</div></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 상태 텍스트 변환
+        function getStatusText(status) {
+            const statusMap = {
+                pass: '정상',
+                fail: '비정상',
+                error: '오류',
+                unknown: '알 수 없음'
+            };
+            return statusMap[status] || '알 수 없음';
+        }
+
+        // 리포트 생성
+        async function generateReport(format) {
+            if (checkResults.length === 0) {
+                showAlert('생성할 리포트 데이터가 없습니다.', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/report/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ results: checkResults, format: format })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    document.getElementById('reportMessage').textContent = 
+                        `${format.toUpperCase()} 리포트가 성공적으로 생성되었습니다.`;
+                    
+                    const downloadLink = document.getElementById('downloadLink');
+                    downloadLink.href = result.download_url;
+                    downloadLink.style.display = 'inline-block';
+                    
+                    new bootstrap.Modal(document.getElementById('reportModal')).show();
+                } else {
+                    showAlert(result.error || '리포트 생성에 실패했습니다.', 'danger');
+                }
+            } catch (error) {
+                showAlert('리포트 생성 오류가 발생했습니다.', 'danger');
+            }
+        }
+
+        // 알림 표시
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show`;
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            alertContainer.appendChild(alert);
+
+            // 5초 후 자동 제거
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Palo Alto Parameter Checker 초기화 완료');
+        });
     </script>
 </body>
 </html>

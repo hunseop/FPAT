@@ -18,7 +18,6 @@ class PaloAltoSSHConnector:
         self.shell = None
         self.timeout = 30
         self.command_timeout = 10
-        self.prompt_pattern = r'\S+[>#]\s*$'
         
     def connect(self) -> Dict[str, any]:
         """SSH 연결 수행"""
@@ -100,7 +99,7 @@ class PaloAltoSSHConnector:
             
             # 명령어 전송
             self.shell.send(command + '\n')
-            time.sleep(0.5)
+            time.sleep(1)  # 명령어 실행 대기시간 증가
             
             # 출력 읽기
             output = self._read_until_prompt()
@@ -110,8 +109,8 @@ class PaloAltoSSHConnector:
             if lines and command.strip() in lines[0]:
                 lines = lines[1:]
             
-            # 프롬프트 제거
-            if lines and re.search(self.prompt_pattern, lines[-1]):
+            # 프롬프트 제거 (간단한 방식)
+            if lines and ('>' in lines[-1] or '#' in lines[-1] or '$' in lines[-1]):
                 lines = lines[:-1]
             
             clean_output = '\n'.join(lines).strip()
@@ -136,7 +135,7 @@ class PaloAltoSSHConnector:
             }
     
     def _read_until_prompt(self) -> str:
-        """프롬프트가 나타날 때까지 출력 읽기"""
+        """프롬프트가 나타날 때까지 출력 읽기 (단순화된 버전)"""
         output = ""
         max_wait = 30  # 최대 30초 대기
         start_time = time.time()
@@ -147,10 +146,12 @@ class PaloAltoSSHConnector:
                     chunk = self.shell.recv(4096).decode('utf-8', errors='ignore')
                     output += chunk
                     
-                    # 프롬프트 패턴 확인
+                    # 간단한 프롬프트 확인 (> # $ 로 끝나는 라인)
                     lines = output.split('\n')
-                    if lines and re.search(self.prompt_pattern, lines[-1]):
-                        break
+                    if lines:
+                        last_line = lines[-1].strip()
+                        if last_line.endswith('>') or last_line.endswith('#') or last_line.endswith('$'):
+                            break
                 else:
                     time.sleep(0.1)
                     
@@ -165,7 +166,7 @@ class PaloAltoSSHConnector:
         if not self.shell:
             return {'success': False, 'error': 'SSH 연결이 없습니다'}
         
-        return self.execute_command('show system info | match hostname')
+        return self.execute_command('show system info | head -5')
     
     def is_connected(self) -> bool:
         """연결 상태 확인"""

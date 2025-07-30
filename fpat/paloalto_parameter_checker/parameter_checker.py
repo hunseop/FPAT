@@ -15,8 +15,6 @@ class ParameterChecker:
     def __init__(self, ssh_connector: PaloAltoSSHConnector):
         self.ssh_connector = ssh_connector
         self.parameters_config = None
-        self.ssh_config = None
-        self.report_config = None
         self._load_config()
     
     def _load_config(self):
@@ -28,8 +26,6 @@ class ParameterChecker:
                 config = yaml.safe_load(file)
             
             self.parameters_config = config.get('parameters', [])
-            self.ssh_config = config.get('ssh_config', {})
-            self.report_config = config.get('report_config', {})
             
             logger.info(f"설정 파일 로드 완료: {len(self.parameters_config)}개 매개변수")
             
@@ -52,7 +48,6 @@ class ParameterChecker:
                 'name': param.get('name'),
                 'description': param.get('description'),
                 'expected_value': param.get('expected_value'),
-                'result_type': param.get('result_type', 'single'),
                 'multi_result': param.get('multi_result', False)
             })
         
@@ -100,10 +95,8 @@ class ParameterChecker:
         query_command = param_config.get('query_command')
         modify_command = param_config.get('modify_command')
         match_pattern = param_config.get('match_pattern')
-        match_group = param_config.get('match_group', 1)
         separator = param_config.get('separator')
         multi_result = param_config.get('multi_result', False)
-        result_type = param_config.get('result_type', 'single')
         
         logger.info(f"매개변수 점검 시작: {param_name}")
         
@@ -121,10 +114,10 @@ class ParameterChecker:
             output = command_result['output']
             
             # 텍스트 파싱
-            current_value = self._parse_output(output, match_pattern, match_group, separator, multi_result)
+            current_value = self._parse_output(output, match_pattern, separator, multi_result)
             
             # 결과 비교
-            status = self._compare_values(expected_value, current_value, result_type)
+            status = self._compare_values(expected_value, current_value, multi_result)
             
             return {
                 'name': param_name,
@@ -144,21 +137,21 @@ class ParameterChecker:
                 param_name, str(e), description, expected_value, query_command, modify_command
             )
     
-    def _parse_output(self, output: str, pattern: str, group: int, separator: Optional[str], multi_result: bool) -> Union[str, List[str]]:
+    def _parse_output(self, output: str, pattern: str, separator: Optional[str], multi_result: bool) -> Union[str, List[str]]:
         """출력 텍스트 파싱"""
         try:
             if not pattern:
                 return output.strip()
             
-            # 정규식 매칭
+            # 정규식 매칭 (항상 첫 번째 그룹 사용)
             matches = re.finditer(pattern, output, re.MULTILINE | re.IGNORECASE)
             
             if multi_result:
                 # 다중 결과 처리
                 results = []
                 for match in matches:
-                    if group <= len(match.groups()):
-                        value = match.group(group).strip()
+                    if len(match.groups()) > 0:
+                        value = match.group(1).strip()
                         
                         # 구분자로 분할
                         if separator:
@@ -171,8 +164,8 @@ class ParameterChecker:
             else:
                 # 단일 결과 처리
                 match = next(matches, None)
-                if match and group <= len(match.groups()):
-                    value = match.group(group).strip()
+                if match and len(match.groups()) > 0:
+                    value = match.group(1).strip()
                     
                     # 구분자로 분할 (단일 결과지만 값 내에 구분자가 있는 경우)
                     if separator:
@@ -190,10 +183,10 @@ class ParameterChecker:
             logger.error(f"출력 파싱 오류: {str(e)}")
             return ""
     
-    def _compare_values(self, expected: Any, current: Any, result_type: str) -> str:
+    def _compare_values(self, expected: Any, current: Any, multi_result: bool) -> str:
         """기대값과 현재값 비교"""
         try:
-            if result_type == 'list':
+            if multi_result or isinstance(expected, list):
                 # 리스트 비교
                 if isinstance(expected, list) and isinstance(current, list):
                     # 순서 무관 비교
