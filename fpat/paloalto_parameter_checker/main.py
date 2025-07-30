@@ -23,7 +23,8 @@ from paloalto_parameter_checker.parser import (
     get_prefix_map,
     get_expected_values,
     get_command_map,
-    get_command_prefix_map
+    get_command_prefix_map,
+    validate_duplicate_commands
 )
 from paloalto_parameter_checker.reporter import save_report_to_excel, save_text_summary
 
@@ -131,10 +132,11 @@ def print_cli_commands_info(yaml_path):
 
 def main():
     parser = argparse.ArgumentParser(description="Palo Alto Parameter Checker")
-    parser.add_argument("--hostname", required=True, help="방화벽 IP")
-    parser.add_argument("--username", required=True, help="방화벽 접속 계정")
-    parser.add_argument("--password", required=True, help="방화벽 접속 비밀번호")
+    parser.add_argument("--hostname", help="방화벽 IP")
+    parser.add_argument("--username", help="방화벽 접속 계정")
+    parser.add_argument("--password", help="방화벽 접속 비밀번호")
     parser.add_argument("--show-info", action="store_true", help="파라미터 및 CLI 명령어 정보 표시")
+    parser.add_argument("--check-duplicates", action="store_true", help="중복된 API 명령어 검증")
     parser.add_argument("--verbose", "-v", action="store_true", help="상세 로그 출력")
     parser.add_argument("--save-text", action="store_true", help="텍스트 요약 파일도 저장")
     args = parser.parse_args()
@@ -145,6 +147,34 @@ def main():
     
     yaml_path = base_dir / "parameters.yaml"
     
+    # 중복 검증 모드
+    if args.check_duplicates:
+        print("API 명령어 중복 검증 중...")
+        validation_result = validate_duplicate_commands(yaml_path)
+        
+        if 'error' in validation_result:
+            print(f"❌ 검증 실패: {validation_result['error']}")
+            sys.exit(1)
+        
+        print(validation_result['report'])
+        
+        # 중복이 있는 경우 예시 파일도 검증
+        example_path = base_dir / "parameters_with_duplicates_example.yaml"
+        if example_path.exists():
+            print("\n" + "="*50)
+            print("예시 파일 검증 (중복 명령어 포함):")
+            example_result = validate_duplicate_commands(example_path)
+            if 'error' not in example_result:
+                print(example_result['report'])
+        
+        return
+    
+    # 기존 실행 모드에서는 hostname, username, password가 필요
+    if not all([args.hostname, args.username, args.password]):
+        print("❌ 실행 모드에서는 --hostname, --username, --password가 필요합니다.")
+        print("💡 중복 검증만 하려면 --check-duplicates 옵션을 사용하세요.")
+        sys.exit(1)
+
     logger.info(f"Palo Alto 파라미터 점검 시작 - 대상: {args.hostname}")
     
     # 새로운 기능: 파라미터 정보 출력
