@@ -16,23 +16,30 @@ Palo Alto Networks 장비의 보안 매개변수를 SSH를 통해 점검하고 �
 - IP, 사용자ID, 비밀번호 입력
 - SSH 연결 테스트 및 상태 표시
 
-### 2. 매개변수 점검
-- 사전 정의된 명령어들을 순차 실행
+### 2. 매개변수 관리
+- 앱 내에서 매개변수 직접 추가/수정/삭제
+- 매개변수 설정 내보내기/가져오기 (JSON)
+- 기본 매개변수 템플릿 제공
+
+### 3. 매개변수 점검
+- 등록된 명령어들을 순차 실행
 - SSH 출력 결과 파싱
 - 기대값과 현재값 비교
 
-### 3. 결과 표시 및 저장
+### 4. 결과 표시 및 저장
 - 실시간 점검 결과 테이블 표시
 - HTML/CSV 리포트 생성
 - 결과 다운로드 기능
 
 ## 🖥️ UI 구성
 
-### 메인 화면 (단일 페이지)
+### 메인 화면 (탭 구성)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                Palo Alto Parameter Checker              │
+├─────────────────────────────────────────────────────────┤
+│ [점검] [매개변수 관리] [설정]                              │
 ├─────────────────────────────────────────────────────────┤
 │ 연결 정보                                                │
 │ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐        │
@@ -50,13 +57,34 @@ Palo Alto Networks 장비의 보안 매개변수를 SSH를 통해 점검하고 �
 └─────────────────────────────────────────────────────────┘
 ```
 
+### 매개변수 관리 탭
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ 매개변수 관리                                            │
+├─────────────────────────────────────────────────────────┤
+│ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐        │
+│ │파라미터추가│ │ 내보내기 │ │ 가져오기 │ │ 초기화  │        │
+│ └─────────┘ └─────────┘ └─────────┘ └─────────┘        │
+├─────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ 이름 │ 설명     │ 기대값 │ 명령어        │ 패턴  │수정│삭제││
+│ ├─────────────────────────────────────────────────────┤ │
+│ │ctd_mode│CTD모드  │disabled│show system...│CTD.* │[수정][삭제]││
+│ │rematch │재매칭   │yes     │show running..│rem.* │[수정][삭제]││
+│ │timeout │타임아웃 │60      │show system...│tim.* │[수정][삭제]││
+│ └─────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────┘
+```
+
 ## 🔧 기술 사양
 
 ### 기술 스택
 - **백엔드**: Flask (Python)
 - **프론트엔드**: HTML + Bootstrap + Vanilla JavaScript
 - **SSH 라이브러리**: Paramiko
-- **설정 파일**: YAML
+- **데이터 저장**: 로컬 JSON 파일
+- **데이터베이스**: SQLite (매개변수 저장)
 
 ### 파일 구조
 ```
@@ -65,33 +93,74 @@ paloalto_parameter_checker/
 ├── ssh_checker.py          # SSH 연결 및 명령어 실행
 ├── parser.py               # 출력 파싱 로직
 ├── report.py               # 리포트 생성
-├── parameters.yaml         # 매개변수 정의
+├── parameter_manager.py    # 매개변수 관리 (CRUD)
+├── database.py             # SQLite 데이터베이스 관리
 ├── templates/
-│   └── index.html         # 메인 UI
+│   └── index.html         # 메인 UI (탭 구조)
 ├── static/
 │   ├── bootstrap.min.css  # 스타일
 │   └── app.js            # JavaScript
+├── data/
+│   ├── parameters.db      # SQLite 데이터베이스
+│   └── default_params.json # 기본 매개변수 템플릿
 └── reports/               # 생성된 리포트
 ```
 
 ## 📊 데이터 구조
 
-### parameters.yaml
-```yaml
-parameters:
-  - name: "ctd_mode"
-    description: "Content-ID 확인 모드"
-    expected: "disabled"
-    command: "show system setting ctd mode"
-    modify: "set system setting ctd-mode disabled"
-    pattern: "CTD mode is: (\\w+)"
-    
-  - name: "session_timeout"
-    description: "세션 타임아웃"
-    expected: "60"
-    command: "show system setting session timeout"
-    modify: "set system setting session timeout 60"
-    pattern: "timeout: (\\d+)"
+### SQLite 데이터베이스 (parameters.db)
+```sql
+CREATE TABLE parameters (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    description TEXT NOT NULL,
+    expected_value TEXT NOT NULL,
+    command TEXT NOT NULL,
+    modify_command TEXT NOT NULL,
+    pattern TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### 기본 매개변수 템플릿 (default_params.json)
+```json
+[
+  {
+    "name": "ctd_mode",
+    "description": "Content-ID 확인 모드",
+    "expected_value": "disabled",
+    "command": "show system setting ctd mode",
+    "modify_command": "set system setting ctd-mode disabled",
+    "pattern": "CTD mode is: (\\w+)"
+  },
+  {
+    "name": "session_timeout",
+    "description": "세션 타임아웃",
+    "expected_value": "60", 
+    "command": "show system setting session timeout",
+    "modify_command": "set system setting session timeout 60",
+    "pattern": "timeout: (\\d+)"
+  }
+]
+```
+
+### 내보내기/가져오기 형식 (JSON)
+```json
+{
+  "version": "1.0",
+  "exported_at": "2024-01-01T12:00:00Z",
+  "parameters": [
+    {
+      "name": "ctd_mode",
+      "description": "Content-ID 확인 모드",
+      "expected_value": "disabled",
+      "command": "show system setting ctd mode", 
+      "modify_command": "set system setting ctd-mode disabled",
+      "pattern": "CTD mode is: (\\w+)"
+    }
+  ]
+}
 ```
 
 ### 점검 결과 데이터
@@ -152,13 +221,36 @@ Flask → SSH 연결 → 명령어 실행 → 출력 파싱 → 결과 비교
 
 ### 엔드포인트
 ```
+# 점검 관련
 POST /api/check          # 매개변수 점검 실행
 GET  /api/download/html  # HTML 리포트 다운로드  
 GET  /api/download/csv   # CSV 리포트 다운로드
+
+# 매개변수 관리
+GET    /api/parameters           # 매개변수 목록 조회
+POST   /api/parameters           # 새 매개변수 추가
+PUT    /api/parameters/<id>      # 매개변수 수정
+DELETE /api/parameters/<id>      # 매개변수 삭제
+
+# 설정 관리
+GET  /api/export             # 매개변수 설정 내보내기 (JSON)
+POST /api/import             # 매개변수 설정 가져오기 (JSON)
+POST /api/reset              # 기본 매개변수로 초기화
 ```
 
 ### 요청/응답 예시
 ```javascript
+// 매개변수 추가
+POST /api/parameters
+{
+  "name": "ctd_mode",
+  "description": "Content-ID 확인 모드",
+  "expected_value": "disabled",
+  "command": "show system setting ctd mode",
+  "modify_command": "set system setting ctd-mode disabled", 
+  "pattern": "CTD mode is: (\\w+)"
+}
+
 // 점검 요청
 POST /api/check
 {
@@ -187,21 +279,35 @@ POST /api/check
     "error": 1
   }
 }
+
+// 설정 내보내기 응답
+GET /api/export
+{
+  "version": "1.0",
+  "exported_at": "2024-01-01T12:00:00Z",
+  "parameters": [...]
+}
 ```
 
 ## 🚀 구현 우선순위
 
 ### Phase 1: 핵심 기능
-1. SSH 연결 및 명령어 실행
-2. 기본 출력 파싱
-3. 단순 결과 표시
+1. SQLite 데이터베이스 및 기본 매개변수 설정
+2. SSH 연결 및 명령어 실행
+3. 기본 출력 파싱
+4. 단순 결과 표시
 
-### Phase 2: UI 개선
-1. Bootstrap 기반 반응형 UI
+### Phase 2: 매개변수 관리
+1. 매개변수 CRUD 기능 (추가/수정/삭제)
+2. 내보내기/가져오기 기능
+3. 기본 템플릿 초기화 기능
+
+### Phase 3: UI 개선
+1. Bootstrap 기반 탭 구조 UI
 2. 실시간 상태 업데이트
 3. 로딩 상태 표시
 
-### Phase 3: 리포트 기능
+### Phase 4: 리포트 기능
 1. HTML 리포트 생성
 2. CSV 리포트 생성  
 3. 다운로드 기능
@@ -216,9 +322,12 @@ POST /api/check
 ## 🔒 보안 고려사항
 
 - SSH 비밀번호는 메모리에만 저장 (세션 종료 시 삭제)
+- SQLite 데이터베이스는 로컬 파일로만 저장 (네트워크 접근 불가)
 - 입력값 검증 및 SQL 인젝션 방지
+- 매개변수 패턴은 정규식 검증 수행
 - 생성된 리포트 파일 자동 정리 (24시간 후)
 - 로그에 민감정보 기록 금지
+- 가져오기 파일은 JSON 형식 검증 후 처리
 
 ## 🎯 성공 지표
 
@@ -227,6 +336,21 @@ POST /api/check
 - **정확성**: 수동 점검 대비 100% 일치율
 - **효율성**: 수동 점검 대비 80% 시간 단축
 
+## 💡 주요 개선사항
+
+### YAML 파일 제거의 장점
+1. **배포 용이성**: 별도 설정 파일 없이 바로 실행 가능
+2. **사용자 친화성**: 웹 UI에서 직접 매개변수 관리
+3. **유연성**: 실시간으로 매개변수 추가/수정 가능
+4. **백업/복원**: JSON 파일로 설정 백업 및 공유 가능
+5. **초기화**: 언제든지 기본 설정으로 리셋 가능
+
+### 내보내기/가져오기 활용 시나리오
+- **환경별 설정**: 개발/테스트/운영 환경별 매개변수 세트
+- **팀 공유**: 설정 파일을 팀원과 공유
+- **백업**: 중요한 설정 백업 및 복원
+- **버전 관리**: Git 등으로 설정 변경 이력 관리
+
 ---
 
-이 PRD를 기반으로 단순하고 실용적인 Palo Alto Parameter Checker를 구현합니다.
+이 PRD를 기반으로 **YAML 설정 없이** 앱 내에서 모든 매개변수를 관리할 수 있는 단순하고 실용적인 Palo Alto Parameter Checker를 구현합니다.
