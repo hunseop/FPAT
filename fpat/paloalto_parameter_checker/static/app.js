@@ -15,21 +15,60 @@ class ParameterChecker {
 
     bindEvents() {
         // 점검 관련 이벤트
-        document.getElementById('checkButton').addEventListener('click', () => this.runCheck());
-        document.getElementById('downloadExcelBtn').addEventListener('click', () => this.downloadReport('excel'));
-        document.getElementById('downloadHtmlBtn').addEventListener('click', () => this.downloadReport('html'));
+        // Bind check button
+        const checkButton = document.getElementById('checkButton');
+        if (checkButton) {
+            checkButton.addEventListener('click', () => this.runCheck());
+        }
+
+        // Bind export button
+        const downloadExcelBtn = document.getElementById('downloadExcelBtn');
+        if (downloadExcelBtn) {
+            downloadExcelBtn.addEventListener('click', () => this.downloadReport('excel'));
+        }
 
         // 매개변수 관리 이벤트
-        document.getElementById('saveParameterBtn').addEventListener('click', () => this.saveParameter());
-        document.getElementById('parameters-tab').addEventListener('click', () => this.loadParameters());
+        const saveParameterBtn = document.getElementById('saveParameterBtn');
+        if (saveParameterBtn) {
+            saveParameterBtn.addEventListener('click', () => this.saveParameter());
+        }
+
+        const parametersTab = document.getElementById('parameters-tab');
+        if (parametersTab) {
+            parametersTab.addEventListener('click', () => this.loadParameters());
+        }
 
         // 설정 관리 이벤트
-        document.getElementById('exportBtn').addEventListener('click', () => this.exportSettings());
-        document.getElementById('importBtn').addEventListener('click', () => this.importSettings());
-        document.getElementById('resetBtn').addEventListener('click', () => this.resetSettings());
+        const exportBtn = document.getElementById('exportBtn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => this.exportSettings());
+        }
+
+        const importFileInput = document.getElementById('importFileInput');
+        if (importFileInput) {
+            importFileInput.addEventListener('change', () => this.importSettings());
+        }
+
+        const importBtn = document.getElementById('importBtn');
+        if (importBtn) {
+            importBtn.addEventListener('click', () => {
+                const fileInput = document.getElementById('importFileInput');
+                if (fileInput) {
+                    fileInput.click();
+                }
+            });
+        }
+
+        const resetBtn = document.getElementById('resetBtn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => this.resetSettings());
+        }
 
         // 모달 초기화 이벤트
-        document.getElementById('parameterModal').addEventListener('hidden.bs.modal', () => this.resetParameterForm());
+        const parameterModal = document.getElementById('parameterModal');
+        if (parameterModal) {
+            parameterModal.addEventListener('hidden.bs.modal', () => this.resetParameterForm());
+        }
     }
 
     // 유틸리티 함수들
@@ -44,7 +83,7 @@ class ParameterChecker {
         const container = document.querySelector('.container-fluid');
         container.insertBefore(alertDiv, container.firstChild);
         
-        // 5초 후 자동 제거
+        // Remove after 5 seconds
         setTimeout(() => {
             if (alertDiv.parentNode) {
                 alertDiv.remove();
@@ -65,12 +104,12 @@ class ParameterChecker {
             const data = await response.json();
             
             if (!response.ok) {
-                throw new Error(data.message || '요청 실패');
+                throw new Error(data.message || 'Request failed');
             }
 
             return data;
         } catch (error) {
-            console.error('API 호출 실패:', error);
+            console.error('API call failed:', error);
             throw error;
         }
     }
@@ -82,7 +121,7 @@ class ParameterChecker {
         const password = document.getElementById('passwordInput').value.trim();
 
         if (!host || !username || !password) {
-            this.showAlert('모든 필드를 입력해주세요.', 'warning');
+            this.showAlert('Please fill in all fields.', 'warning');
             return;
         }
 
@@ -96,7 +135,7 @@ class ParameterChecker {
 
             if (result.success) {
                 this.displayResults(result.results, result.summary);
-                this.showAlert('점검이 완료되었습니다.', 'success');
+                this.showAlert('Check completed.', 'success');
                 
                 // 다운로드 버튼 활성화
                 document.getElementById('downloadExcelBtn').disabled = false;
@@ -185,9 +224,9 @@ class ParameterChecker {
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
 
-            this.showAlert(`${format.toUpperCase()} 리포트 다운로드 완료`, 'success');
+            this.showAlert(`${format.toUpperCase()} report download completed`, 'success');
         } catch (error) {
-            this.showAlert(`리포트 다운로드 실패: ${error.message}`, 'danger');
+            this.showAlert(`Report download failed: ${error.message}`, 'danger');
         }
     }
 
@@ -200,10 +239,10 @@ class ParameterChecker {
                 this.currentParameters = result.parameters;
                 this.displayParameters();
             } else {
-                this.showAlert('매개변수 로딩 실패', 'danger');
+                this.showAlert('Parameter loading failed', 'danger');
             }
         } catch (error) {
-            this.showAlert(`매개변수 로딩 실패: ${error.message}`, 'danger');
+            this.showAlert(`Parameter loading failed: ${error.message}`, 'danger');
         }
     }
 
@@ -215,7 +254,7 @@ class ParameterChecker {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="6" class="text-center text-muted py-4">
-                        등록된 매개변수가 없습니다. 새 매개변수를 추가하세요.
+                        No parameters registered. Add a new parameter.
                     </td>
                 </tr>
             `;
@@ -232,10 +271,10 @@ class ParameterChecker {
                 <td><code>${param.pattern}</code></td>
                 <td>
                     <button class="btn btn-sm btn-outline-primary me-1" onclick="app.editParameter(${param.id})">
-                        ✏️ 수정
+                        Edit
                     </button>
                     <button class="btn btn-sm btn-outline-danger" onclick="app.deleteParameter(${param.id})">
-                        🗑️ 삭제
+                        Delete
                     </button>
                 </td>
             `;
@@ -268,7 +307,7 @@ class ParameterChecker {
     }
 
     async deleteParameter(id) {
-        if (!confirm('이 매개변수를 삭제하시겠습니까?')) {
+        if (!confirm('Are you sure you want to delete this parameter?')) {
             return;
         }
 
@@ -302,7 +341,7 @@ class ParameterChecker {
         const requiredFields = Object.keys(formData);
         for (const field of requiredFields) {
             if (!formData[field]) {
-                this.showAlert(`${field} 필드는 필수입니다.`, 'warning');
+                this.showAlert(`${field} is required.`, 'warning');
                 return;
             }
         }
@@ -335,7 +374,7 @@ class ParameterChecker {
                 this.showAlert(result.message, 'danger');
             }
         } catch (error) {
-            this.showAlert(`저장 실패: ${error.message}`, 'danger');
+            this.showAlert(`Save failed: ${error.message}`, 'danger');
         }
     }
 
@@ -343,7 +382,7 @@ class ParameterChecker {
         this.isEditing = false;
         this.editingId = null;
         
-        document.getElementById('parameterModalTitle').textContent = '매개변수 추가';
+        document.getElementById('parameterModalTitle').textContent = 'Add Parameter';
         document.getElementById('parameterForm').reset();
         document.getElementById('parameterIdInput').value = '';
     }
@@ -353,23 +392,27 @@ class ParameterChecker {
         try {
             const result = await this.apiCall('/api/export');
             
-            // JSON 파일로 다운로드
-            const blob = new Blob([JSON.stringify(result, null, 2)], {
-                type: 'application/json'
-            });
-            
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `palo_alto_parameters_${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            if (result.success) {
+                // JSON 파일로 다운로드
+                const blob = new Blob([JSON.stringify(result.data, null, 2)], {
+                    type: 'application/json'
+                });
+                
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `palo_alto_parameters_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
 
-            this.showAlert('설정 내보내기 완료', 'success');
+                this.showAlert('Export completed', 'success');
+            } else {
+                this.showAlert(result.message || 'Export failed', 'danger');
+            }
         } catch (error) {
-            this.showAlert(`내보내기 실패: ${error.message}`, 'danger');
+            this.showAlert(`Export failed: ${error.message}`, 'danger');
         }
     }
 
@@ -378,7 +421,7 @@ class ParameterChecker {
         const file = fileInput.files[0];
         
         if (!file) {
-            this.showAlert('가져올 파일을 선택하세요.', 'warning');
+            this.showAlert('Please select a file to import.', 'warning');
             return;
         }
 
@@ -399,12 +442,12 @@ class ParameterChecker {
                 this.showAlert(result.message, 'danger');
             }
         } catch (error) {
-            this.showAlert(`가져오기 실패: ${error.message}`, 'danger');
+            this.showAlert(`Import failed: ${error.message}`, 'danger');
         }
     }
 
     async resetSettings() {
-        if (!confirm('모든 매개변수를 기본값으로 초기화하시겠습니까?\n기존 설정은 모두 삭제됩니다.')) {
+        if (!confirm('Are you sure you want to reset all parameters to default values?\nAll existing settings will be deleted.')) {
             return;
         }
 
@@ -420,7 +463,7 @@ class ParameterChecker {
                 this.showAlert(result.message, 'danger');
             }
         } catch (error) {
-            this.showAlert(`초기화 실패: ${error.message}`, 'danger');
+            this.showAlert(`Reset failed: ${error.message}`, 'danger');
         }
     }
 }

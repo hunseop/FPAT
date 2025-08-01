@@ -352,7 +352,7 @@ if __name__ == '__main__':
     print("=" * 60)
     print("🛡️  Palo Alto Parameter Checker v2.0")
     print("=" * 60)
-    print("📍 서버 주소: http://localhost:5000")
+    print("📍 서버 주소: http://localhost:5012")
     print("🔗 브라우저에서 위 주소로 접속하세요")
     print("=" * 60)
     
@@ -360,7 +360,7 @@ if __name__ == '__main__':
         # 오래된 리포트 파일 정리
         report_generator.cleanup_old_reports()
         
-        app.run(host='0.0.0.0', port=5000, debug=False)
+        app.run(host='0.0.0.0', port=5012, debug=True)
     except KeyboardInterrupt:
         print("\n👋 서버를 종료합니다.")
     except Exception as e:
