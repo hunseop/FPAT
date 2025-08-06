@@ -12,7 +12,7 @@ SSH 기반 Palo Alto Networks 보안 매개변수 점검 시스템
 - **유연한 매개변수 설정**: YAML 기반 설정으로 쉬운 관리
 - **다중 결과 처리**: 구분자 옵션과 다중 결과 지원
 - **현대적인 웹 UI**: Vue.js 기반 SPA 인터페이스
-- **다양한 리포트 형식**: HTML, CSV, JSON 형식 지원
+- **리포트 형식**: Excel 형식 지원
 - **실시간 상태 표시**: 연결 상태 및 점검 진행 상황 표시
 
 ## 기술 스택
@@ -21,7 +21,7 @@ SSH 기반 Palo Alto Networks 보안 매개변수 점검 시스템
 - **Flask**: 웹 프레임워크
 - **Paramiko**: SSH 클라이언트
 - **PyYAML**: 설정 파일 파싱
-- **Jinja2**: HTML 템플릿 엔진
+- **openpyxl**: Excel 파일 생성
 
 ### 프론트엔드
 - **Vue.js 3**: SPA 프레임워크
@@ -114,9 +114,7 @@ report_config:
 - 상세 정보 및 명령어 확인
 
 ### 5. 리포트 생성
-- HTML: 웹 브라우저에서 볼 수 있는 형식
-- CSV: Excel 등에서 열 수 있는 형식
-- JSON: 프로그래밍 처리용 형식
+- Excel: 스프레드시트 형식의 상세 리포트 (셀 서식 및 차트 포함)
 
 ## API 엔드포인트
 
@@ -129,8 +127,7 @@ report_config:
 - `POST /api/check`: 선택된 매개변수 점검 실행
 
 ### 리포트 관리
-- `POST /api/report/generate`: 리포트 생성
-- `GET /api/report/download/<filename>`: 리포트 다운로드
+- `GET /api/download/excel`: Excel 리포트 다운로드
 
 ## 파일 구조
 
@@ -169,9 +166,9 @@ fpat/paloalto_parameter_checker/
    - 실시간 상태 표시
 
 4. **리포트 기능 강화**
-   - 다양한 형식 지원
-   - 통계 정보 제공
-   - 다운로드 기능
+   - Excel 형식의 전문적인 리포트
+   - 상세 통계 및 차트
+   - 셀 서식 및 스타일링
 
 ## 문제 해결
 

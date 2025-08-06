@@ -286,41 +286,6 @@ def download_excel_report():
             'message': f'Excel 리포트 다운로드 실패: {str(e)}'
         }), 500
 
-@app.route('/api/download/html', methods=['GET'])
-def download_html_report():
-    """HTML 리포트 다운로드"""
-    try:
-        # 마지막 점검 결과 확인
-        if 'LAST_CHECK_RESULTS' not in app.config:
-            return jsonify({
-                'success': False,
-                'message': '다운로드할 점검 결과가 없습니다. 먼저 점검을 실행하세요.'
-            }), 400
-        
-        results = app.config['LAST_CHECK_RESULTS']
-        summary = app.config['LAST_CHECK_SUMMARY']
-        
-        # HTML 리포트 생성
-        report_result = report_generator.generate_html_report(results, summary)
-        
-        if report_result['success']:
-            return send_file(
-                report_result['filepath'],
-                as_attachment=True,
-                download_name=report_result['filename'],
-                mimetype='text/html'
-            )
-        else:
-            return jsonify({
-                'success': False,
-                'message': report_result['message']
-            }), 500
-            
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'HTML 리포트 다운로드 실패: {str(e)}'
-        }), 500
 
 # 헬스 체크 API
 @app.route('/api/health', methods=['GET'])
