@@ -188,13 +188,24 @@ class SSHChecker:
 class ParameterChecker:
     def __init__(self):
         self.ssh = SSHChecker()
+        self.command_cache = {}  # 명령어 실행 결과 캐시
     
     def connect_to_device(self, host: str, username: str, password: str) -> Dict:
         """장비에 연결"""
+        self.command_cache.clear()  # 새 연결 시 캐시 초기화
         return self.ssh.connect(host, username, password)
     
+    def _execute_command_with_cache(self, command: str) -> Dict:
+        """캐시를 활용한 명령어 실행"""
+        if command in self.command_cache:
+            return self.command_cache[command]
+        
+        result = self.ssh.execute_command(command)
+        self.command_cache[command] = result
+        return result
+    
     def check_parameters(self, parameters: list) -> Dict:
-        """매개변수들 점검"""
+        """매개변수들 점검 (명령어 캐싱 적용)"""
         if not self.ssh.is_connected:
             return {
                 'success': False,
@@ -205,69 +216,77 @@ class ParameterChecker:
         results = []
         summary = {'total': len(parameters), 'pass': 0, 'fail': 0, 'error': 0}
         
+        # 1. 명령어별로 파라미터 그룹화
+        command_groups = {}
         for param in parameters:
-            try:
-                # 명령어 실행
-                cmd_result = self.ssh.execute_command(param['command'])
-                
-                if not cmd_result['success']:
+            command = param['command']
+            if command not in command_groups:
+                command_groups[command] = []
+            command_groups[command].append(param)
+        
+        # 2. 각 명령어 그룹 처리
+        for command, param_group in command_groups.items():
+            # 명령어 한 번만 실행
+            cmd_result = self._execute_command_with_cache(command)
+            
+            if not cmd_result['success']:
+                # 명령어 실행 실패 시 그룹의 모든 파라미터를 에러로 처리
+                for param in param_group:
                     result = {
                         'parameter': param['name'],
                         'expected': param['expected_value'],
                         'current': 'ERROR',
                         'status': 'ERROR',
-                        'query_method': param['command'],
+                        'query_method': command,
                         'modify_method': param['modify_command'],
                         'error': cmd_result['message']
                     }
+                    results.append(result)
                     summary['error'] += 1
-                else:
-                    # 출력 파싱
-                    current_value = self._parse_output(cmd_result['output'], param['pattern'])
-                    
-                    if current_value is None:
-                        result = {
-                            'parameter': param['name'],
-                            'expected': param['expected_value'],
-                            'current': 'PARSE_ERROR',
-                            'status': 'ERROR',
-                            'query_method': param['command'],
-                            'modify_method': param['modify_command'],
-                            'error': '출력 파싱 실패'
-                        }
-                        summary['error'] += 1
-                    else:
-                        # 값 비교
-                        status = 'PASS' if self._compare_values(param['expected_value'], current_value) else 'FAIL'
+            else:
+                # 명령어 실행 성공 시 각 파라미터별로 패턴 매칭
+                output = cmd_result['output']
+                for param in param_group:
+                    try:
+                        current_value = self._parse_output(output, param['pattern'])
                         
-                        result = {
-                            'parameter': param['name'],
-                            'expected': param['expected_value'],
-                            'current': current_value,
-                            'status': status,
-                            'query_method': param['command'],
-                            'modify_method': param['modify_command']
-                        }
-                        
-                        if status == 'PASS':
-                            summary['pass'] += 1
+                        if current_value is None:
+                            result = {
+                                'parameter': param['name'],
+                                'expected': param['expected_value'],
+                                'current': 'PARSE_ERROR',
+                                'status': 'ERROR',
+                                'query_method': command,
+                                'modify_method': param['modify_command'],
+                                'error': '출력 파싱 실패'
+                            }
+                            summary['error'] += 1
                         else:
-                            summary['fail'] += 1
-                
-                results.append(result)
-                
-            except Exception as e:
-                result = {
-                    'parameter': param['name'],
-                    'expected': param['expected_value'],
-                    'current': 'ERROR',
-                    'status': 'ERROR',
-                    'query_method': param['command'],
-                    'modify_method': param['modify_command'],
-                    'error': f'점검 중 오류: {str(e)}'
-                }
-                results.append(result)
-                summary['error'] += 1
+                            status = 'PASS' if self._compare_values(param['expected_value'], current_value) else 'FAIL'
+                            result = {
+                                'parameter': param['name'],
+                                'expected': param['expected_value'],
+                                'current': current_value,
+                                'status': status,
+                                'query_method': command,
+                                'modify_method': param['modify_command']
+                            }
+                            summary['pass' if status == 'PASS' else 'fail'] += 1
+                        
+                        results.append(result)
+                        
+                    except Exception as e:
+                        result = {
+                            'parameter': param['name'],
+                            'expected': param['expected_value'],
+                            'current': 'ERROR',
+                            'status': 'ERROR',
+                            'query_method': command,
+                            'modify_method': param['modify_command'],
+                            'error': f'점검 중 오류: {str(e)}'
+                        }
+                        results.append(result)
+                        summary['error'] += 1
         
         return {
             'success': True,
