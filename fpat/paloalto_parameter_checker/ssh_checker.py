@@ -276,27 +276,59 @@ class ParameterChecker:
         }
     
     def _parse_output(self, output: str, pattern: str) -> Optional[str]:
-        """정규식으로 출력에서 값 추출"""
+        """정규식으로 출력에서 값 추출 (다중 매칭 지원)"""
         try:
             import re
             
-            # 여러 줄에서 패턴 검색
-            match = re.search(pattern, output, re.MULTILINE | re.IGNORECASE)
-            if match and match.groups():
-                return match.group(1).strip()
+            # 모든 매칭 찾기
+            matches = re.findall(pattern, output, re.MULTILINE | re.IGNORECASE)
             
-            return None
+            if not matches:
+                return None
+            
+            if len(matches) == 1:
+                # 단일 매칭: 기존 방식
+                return matches[0].strip()
+            else:
+                # 다중 매칭: 모든 값이 같은지 확인
+                unique_values = list(set(match.strip() for match in matches))
+                
+                if len(unique_values) == 1:
+                    # 모든 값이 동일: "ALL_SAME(3x true)" 형태로 반환
+                    return f"ALL_SAME({len(matches)}x {unique_values[0]})"
+                else:
+                    # 값이 다름: "MIXED(true,false,true)" 형태로 반환
+                    return f"MIXED({','.join(matches)})"
             
         except Exception:
             return None
     
     def _compare_values(self, expected: str, current: str) -> bool:
-        """기대값과 현재값 비교"""
-        # 대소문자 무시하고 공백 제거 후 비교
+        """기대값과 현재값 비교 (다중 매칭 지원)"""
+        if not current:
+            return False
+        
+        # 대소문자 무시하고 공백 제거
         expected_clean = expected.strip().lower()
         current_clean = current.strip().lower()
         
-        return expected_clean == current_clean
+        # 다중 매칭 결과 처리
+        if current_clean.startswith('all_same('):
+            # "ALL_SAME(3x true)" 형태에서 실제 값 추출
+            import re
+            match = re.search(r'all_same\(\d+x\s*(.+)\)', current_clean)
+            if match:
+                actual_value = match.group(1).strip()
+                return expected_clean == actual_value
+            return False
+        
+        elif current_clean.startswith('mixed('):
+            # "MIXED(true,false,true)" 형태는 항상 실패
+            return False
+        
+        else:
+            # 일반적인 단일 값 비교
+            return expected_clean == current_clean
     
     def disconnect(self):
         """연결 종료"""
