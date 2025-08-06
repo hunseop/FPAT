@@ -14,6 +14,12 @@ class ParameterChecker {
     }
 
     bindEvents() {
+        // 매개변수 검색 이벤트
+        const searchInput = document.getElementById('parameterSearchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => this.filterParameters(e.target.value));
+        }
+
         // 점검 관련 이벤트
         // Bind check button
         const checkButton = document.getElementById('checkButton');
@@ -73,22 +79,22 @@ class ParameterChecker {
 
     // 유틸리티 함수들
     showAlert(message, type = 'info') {
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-        alertDiv.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = message;
         
-        const container = document.querySelector('.container-fluid');
-        container.insertBefore(alertDiv, container.firstChild);
+        const container = document.getElementById('toastContainer');
+        container.appendChild(toast);
         
-        // Remove after 5 seconds
+        // Trigger reflow to enable transition
+        toast.offsetHeight;
+        toast.classList.add('show');
+        
+        // Remove after 3 seconds
         setTimeout(() => {
-            if (alertDiv.parentNode) {
-                alertDiv.remove();
-            }
-        }, 5000);
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
     }
 
     async apiCall(url, options = {}) {
@@ -144,7 +150,7 @@ class ParameterChecker {
                 this.showAlert(result.message, 'danger');
             }
         } catch (error) {
-            this.showAlert(`점검 실행 실패: ${error.message}`, 'danger');
+            this.showAlert(`Check failed: ${error.message}`, 'error');
         } finally {
             this.setCheckingState(false);
         }
@@ -157,11 +163,11 @@ class ParameterChecker {
 
         if (checking) {
             button.disabled = true;
-            buttonText.textContent = '점검 중...';
+            buttonText.textContent = 'Checking...';
             spinner.classList.remove('d-none');
         } else {
             button.disabled = false;
-            buttonText.textContent = '🚀 점검 시작';
+            buttonText.textContent = 'Check';
             spinner.classList.add('d-none');
         }
     }
@@ -246,11 +252,22 @@ class ParameterChecker {
         }
     }
 
-    displayParameters() {
+    filterParameters(searchText) {
+        const filteredParams = this.currentParameters.filter(param => {
+            const searchLower = searchText.toLowerCase();
+            return param.name.toLowerCase().includes(searchLower) ||
+                   param.description.toLowerCase().includes(searchLower) ||
+                   param.command.toLowerCase().includes(searchLower) ||
+                   param.pattern.toLowerCase().includes(searchLower);
+        });
+        this.displayParameters(filteredParams);
+    }
+
+    displayParameters(parameters = this.currentParameters) {
         const tbody = document.getElementById('parametersTableBody');
         tbody.innerHTML = '';
 
-        if (this.currentParameters.length === 0) {
+        if (parameters.length === 0) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="6" class="text-center text-muted py-4">
@@ -270,12 +287,14 @@ class ParameterChecker {
                 <td><span class="command-text">${param.command}</span></td>
                 <td><code>${param.pattern}</code></td>
                 <td>
-                    <button class="btn btn-sm btn-outline-primary me-1" onclick="app.editParameter(${param.id})">
-                        Edit
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="app.deleteParameter(${param.id})">
-                        Delete
-                    </button>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-link btn-sm text-primary px-1" onclick="app.editParameter(${param.id})" title="Edit parameter">
+                            <i class="fa-solid fa-edit"></i>
+                        </button>
+                        <button class="btn btn-link btn-sm text-danger px-1" onclick="app.deleteParameter(${param.id})" title="Delete parameter">
+                            <i class="fa-solid fa-trash-alt"></i>
+                        </button>
+                    </div>
                 </td>
             `;
             tbody.appendChild(row);
@@ -323,7 +342,7 @@ class ParameterChecker {
                 this.showAlert(result.message, 'danger');
             }
         } catch (error) {
-            this.showAlert(`삭제 실패: ${error.message}`, 'danger');
+            this.showAlert(`Delete failed: ${error.message}`, 'error');
         }
     }
 

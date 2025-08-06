@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Palo Alto Parameter Checker</title>
     <link href="{{ url_for('static', filename='bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='fontawesome/css/all.min.css') }}" rel="stylesheet">
     <style>
         :root {
             --primary: #2563eb;
@@ -113,11 +114,51 @@
             color: var(--text-light);
             font-size: 0.75rem;
         }
+        
+        /* Toast notifications */
+        #toastContainer {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        
+        .toast {
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-bottom: 10px;
+            min-width: 250px;
+            opacity: 0;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .toast.show {
+            opacity: 1;
+        }
+        
+        .toast.success {
+            border-left: 4px solid var(--success);
+        }
+        
+        .toast.error {
+            border-left: 4px solid var(--danger);
+        }
+        
+        .toast.warning {
+            border-left: 4px solid var(--warning);
+        }
+        
+        .toast.info {
+            border-left: 4px solid var(--primary);
+        }
     </style>
 </head>
 <body>
+    <div id="toastContainer"></div>
     <div class="container-fluid mt-3">
-        <!-- 헤더 -->
+        <!-- Header -->
         <div class="row mb-3">
             <div class="col">
                 <h4 class="text-center mb-0">Palo Alto Parameter Checker</h4>
@@ -227,7 +268,7 @@
                                 <tbody id="resultsTableBody">
                                     <tr>
                                         <td colspan="6" class="text-center text-muted py-5">
-                                            Enter SSH connection details and click Check to start.
+                                            Enter SSH connection details and click "Start Check" to begin.
                                         </td>
                                     </tr>
                                 </tbody>
@@ -247,6 +288,15 @@
                         </button>
                     </div>
                     <div class="card-body">
+                        <!-- 검색창 -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fa-solid fa-search"></i></span>
+                                    <input type="text" class="form-control" id="parameterSearchInput" placeholder="Search parameters...">
+                                </div>
+                            </div>
+                        </div>
                         <!-- 매개변수 목록 -->
                         <div class="table-responsive">
                             <table class="table table-striped" id="parametersTable">
@@ -289,7 +339,7 @@
                                 <p class="text-muted">Import parameters from a JSON file.</p>
                                 <input type="file" class="d-none" id="importFileInput" accept=".json">
                                 <button type="button" class="btn btn-outline-success" id="importBtn">
-                                    <i class="fas fa-file-import me-1"></i>Import
+                                    Import
                                 </button>
                             </div>
                             <div class="col-md-4 mb-3">

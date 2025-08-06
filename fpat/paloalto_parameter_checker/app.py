@@ -40,7 +40,7 @@ def get_parameters():
     except Exception as e:
         return jsonify({
             'success': False,
-            'message': f'매개변수 조회 실패: {str(e)}'
+                            'message': f'Failed to fetch parameters: {str(e)}'
         }), 500
 
 @app.route('/api/parameters', methods=['POST'])
@@ -75,7 +75,7 @@ def add_parameter():
     except Exception as e:
         return jsonify({
             'success': False,
-            'message': f'매개변수 추가 실패: {str(e)}'
+                            'message': f'Failed to add parameter: {str(e)}'
         }), 500
 
 @app.route('/api/parameters/<int:param_id>', methods=['PUT'])
@@ -111,7 +111,7 @@ def update_parameter(param_id):
     except Exception as e:
         return jsonify({
             'success': False,
-            'message': f'매개변수 수정 실패: {str(e)}'
+                            'message': f'Failed to update parameter: {str(e)}'
         }), 500
 
 @app.route('/api/parameters/<int:param_id>', methods=['DELETE'])
@@ -128,7 +128,7 @@ def delete_parameter(param_id):
     except Exception as e:
         return jsonify({
             'success': False,
-            'message': f'매개변수 삭제 실패: {str(e)}'
+                            'message': f'Failed to delete parameter: {str(e)}'
         }), 500
 
 # 설정 관리 API
@@ -149,7 +149,7 @@ def export_parameters():
     except Exception as e:
         return jsonify({
             'success': False,
-            'message': f'내보내기 실패: {str(e)}'
+                            'message': f'Failed to export: {str(e)}'
         }), 500
 
 @app.route('/api/import', methods=['POST'])
@@ -161,7 +161,7 @@ def import_parameters():
         if not data:
             return jsonify({
                 'success': False,
-                'message': '가져올 데이터가 없습니다'
+                'message': 'No data to import'
             }), 400
         
         result = param_manager.import_parameters(data)
@@ -174,7 +174,7 @@ def import_parameters():
     except Exception as e:
         return jsonify({
             'success': False,
-            'message': f'가져오기 실패: {str(e)}'
+                            'message': f'Failed to import: {str(e)}'
         }), 500
 
 @app.route('/api/reset', methods=['POST'])
@@ -191,7 +191,7 @@ def reset_parameters():
     except Exception as e:
         return jsonify({
             'success': False,
-            'message': f'초기화 실패: {str(e)}'
+                            'message': f'Failed to reset: {str(e)}'
         }), 500
 
 # 점검 관련 API
@@ -207,7 +207,7 @@ def check_parameters():
             if field not in data or not data[field]:
                 return jsonify({
                     'success': False,
-                    'message': f'{field} 필드는 필수입니다'
+                    'message': f'The {field} field is required'
                 }), 400
         
         # SSH 연결
@@ -227,7 +227,7 @@ def check_parameters():
             if not parameters:
                 return jsonify({
                     'success': False,
-                    'message': '점검할 매개변수가 없습니다'
+                    'message': 'No parameters to check'
                 }), 400
             
             # 매개변수 점검 실행
@@ -246,7 +246,7 @@ def check_parameters():
     except Exception as e:
         return jsonify({
             'success': False,
-            'message': f'점검 실행 실패: {str(e)}'
+                            'message': f'Failed to execute check: {str(e)}'
         }), 500
 
 # 리포트 다운로드 API
@@ -258,7 +258,7 @@ def download_excel_report():
         if 'LAST_CHECK_RESULTS' not in app.config:
             return jsonify({
                 'success': False,
-                'message': '다운로드할 점검 결과가 없습니다. 먼저 점검을 실행하세요.'
+                'message': 'No check results to download. Please run a check first.'
             }), 400
         
         results = app.config['LAST_CHECK_RESULTS']
@@ -283,7 +283,7 @@ def download_excel_report():
     except Exception as e:
         return jsonify({
             'success': False,
-            'message': f'Excel 리포트 다운로드 실패: {str(e)}'
+                            'message': f'Failed to download Excel report: {str(e)}'
         }), 500
 
 
@@ -293,7 +293,7 @@ def health_check():
     """서버 상태 확인"""
     return jsonify({
         'success': True,
-        'message': 'Palo Alto Parameter Checker 서버가 정상 동작 중입니다',
+        'message': 'Palo Alto Parameter Checker server is running normally',
         'timestamp': datetime.now().isoformat()
     })
 
@@ -302,14 +302,14 @@ def health_check():
 def not_found(error):
     return jsonify({
         'success': False,
-        'message': '요청한 리소스를 찾을 수 없습니다'
+        'message': 'The requested resource was not found'
     }), 404
 
 @app.errorhandler(500)
 def internal_error(error):
     return jsonify({
         'success': False,
-        'message': '서버 내부 오류가 발생했습니다'
+        'message': 'An internal server error occurred'
     }), 500
 
 if __name__ == '__main__':
