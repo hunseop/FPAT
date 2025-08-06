@@ -389,12 +389,15 @@ class ParameterChecker {
 
     // 설정 관리 함수들
     async exportSettings() {
+        if (!confirm('Are you sure you want to export all parameters?')) {
+            return;
+        }
+
         try {
             const result = await this.apiCall('/api/export');
             
-            if (result.success) {
-                // JSON 파일로 다운로드
-                const blob = new Blob([JSON.stringify(result.data, null, 2)], {
+            // JSON 파일로 다운로드
+            const blob = new Blob([JSON.stringify(result, null, 2)], {
                     type: 'application/json'
                 });
                 
@@ -408,9 +411,6 @@ class ParameterChecker {
                 URL.revokeObjectURL(url);
 
                 this.showAlert('Export completed', 'success');
-            } else {
-                this.showAlert(result.message || 'Export failed', 'danger');
-            }
         } catch (error) {
             this.showAlert(`Export failed: ${error.message}`, 'danger');
         }
