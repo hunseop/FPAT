@@ -38,6 +38,46 @@ def check_dependencies():
     
     return True
 
+def check_unnecessary_packages():
+    """불필요한 대용량 패키지들이 설치되어 있는지 확인"""
+    print("\n📦 대용량 패키지 확인 (빌드 용량 최적화)...")
+    
+    large_packages = {
+        'numpy': 'NumPy (과학 계산용 - 이 프로젝트에서 미사용)',
+        'pandas': 'Pandas (데이터 분석용 - 이 프로젝트에서 미사용)',
+        'matplotlib': 'Matplotlib (그래프 생성용 - 이 프로젝트에서 미사용)',
+        'scipy': 'SciPy (과학 계산용 - 이 프로젝트에서 미사용)',
+        'tensorflow': 'TensorFlow (머신러닝용 - 이 프로젝트에서 미사용)',
+        'torch': 'PyTorch (머신러닝용 - 이 프로젝트에서 미사용)'
+    }
+    
+    installed_large_packages = []
+    
+    for package, description in large_packages.items():
+        try:
+            __import__(package)
+            installed_large_packages.append((package, description))
+        except ImportError:
+            continue
+    
+    if installed_large_packages:
+        print("⚠️ 다음 대용량 패키지들이 설치되어 있습니다:")
+        total_impact = 0
+        for package, description in installed_large_packages:
+            size_estimate = {'numpy': '15-20MB', 'pandas': '20-30MB', 'matplotlib': '20-30MB', 
+                           'scipy': '30-40MB', 'tensorflow': '100-200MB', 'torch': '100-500MB'}
+            size = size_estimate.get(package, '10-50MB')
+            print(f"   📦 {package} - {description} (~{size})")
+            
+        print(f"\n💡 빌드 용량 절약 팁:")
+        print(f"   - 이 패키지들은 --exclude-module 옵션으로 제외됩니다")
+        print(f"   - 필요없다면 제거하여 개발환경도 가볍게 만들 수 있습니다:")
+        print(f"   - pip uninstall {' '.join([pkg for pkg, _ in installed_large_packages])}")
+    else:
+        print("✅ 대용량 패키지가 설치되지 않았습니다. 빌드 용량이 최적화됩니다!")
+    
+    return True
+
 def clean_build():
     """이전 빌드 결과물 정리"""
     print("🧹 이전 빌드 결과물 정리 중...")
@@ -77,6 +117,10 @@ def build_application_basic():
         '--hidden-import=sqlite3',
         '--hidden-import=openpyxl',
         '--hidden-import=paramiko',
+        '--exclude-module=numpy',      # numpy 제외 (프로젝트에서 사용하지 않음)
+        '--exclude-module=pandas',     # pandas 제외 (혹시 포함되는 경우)
+        '--exclude-module=matplotlib', # matplotlib 제외 (혹시 포함되는 경우)
+        '--exclude-module=scipy',      # scipy 제외 (혹시 포함되는 경우)
         'app.py'                       # 메인 스크립트
     ]
     
@@ -258,10 +302,13 @@ def main():
     if not check_dependencies():
         return False
     
-    # 2. 이전 빌드 정리
+    # 2. 대용량 패키지 확인 (빌드 용량 최적화)
+    check_unnecessary_packages()
+    
+    # 3. 이전 빌드 정리
     clean_build()
     
-    # 3. 빌드 방법 선택
+    # 4. 빌드 방법 선택
     use_spec = os.path.exists('parameter_checker.spec')
     
     if use_spec:
@@ -274,7 +321,7 @@ def main():
     if not build_success:
         return False
     
-    # 4. 추가 파일들 생성
+    # 5. 추가 파일들 생성
     if not create_launcher_script():
         print("⚠️ 런처 스크립트 생성에 실패했지만 빌드는 완료되었습니다.")
     

@@ -34,6 +34,14 @@ def test_dependencies():
         'PyInstaller': 'PyInstaller'
     }
     
+    # 선택적 패키지 (있어도 되고 없어도 됨, 빌드 시 제외됨)
+    optional_packages = {
+        'numpy': 'NumPy (빌드 시 제외됨)',
+        'pandas': 'Pandas (빌드 시 제외됨)',
+        'matplotlib': 'Matplotlib (빌드 시 제외됨)',
+        'scipy': 'SciPy (빌드 시 제외됨)'
+    }
+    
     all_installed = True
     
     for module_name, display_name in required_packages.items():
@@ -43,6 +51,14 @@ def test_dependencies():
         except ImportError:
             print(f"   ❌ {display_name} - 설치 필요")
             all_installed = False
+    
+    # 선택적 패키지 확인
+    for module_name, display_name in optional_packages.items():
+        try:
+            importlib.import_module(module_name)
+            print(f"   ⚪ {display_name} - 설치됨 (빌드 용량 증가 요인)")
+        except ImportError:
+            print(f"   ✅ {display_name} - 없음 (빌드 용량 최적화)")
     
     return all_installed
 
