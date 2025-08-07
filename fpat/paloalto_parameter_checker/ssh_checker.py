@@ -93,6 +93,11 @@ class SSHChecker:
             
             for cmd in setup_commands:
                 try:
+                    # 설정 명령어도 검증 (안전성 확보)
+                    validation_result = self._validate_command(cmd)
+                    if not validation_result['valid']:
+                        return {'success': False, 'message': f'설정 명령어 검증 실패: {validation_result["message"]}'}
+                    
                     # 명령어 전송
                     self.shell.send(cmd + '\n')
                     time.sleep(1)
@@ -173,6 +178,15 @@ class SSHChecker:
                 'output': ''
             }
         
+        # 명령어 입력값 검증
+        validation_result = self._validate_command(command)
+        if not validation_result['valid']:
+            return {
+                'success': False,
+                'message': f'허용되지 않은 명령어: {validation_result["message"]}',
+                'output': ''
+            }
+        
         try:
             # 연결 상태 확인
             if self.shell.closed:
@@ -237,6 +251,51 @@ class SSHChecker:
                 'message': f'명령어 실행 실패: {str(e)}',
                 'output': ''
             }
+    
+    def _validate_command(self, command: str) -> Dict:
+        """명령어 입력값 검증"""
+        if not command or not command.strip():
+            return {'valid': False, 'message': '빈 명령어'}
+        
+        cmd = command.strip()
+        
+        # 길이 제한 (너무 긴 명령어 방지)
+        if len(cmd) > 1000:
+            return {'valid': False, 'message': '명령어 길이 초과 (최대 1000자)'}
+        
+        # 특수문자 검사 (파이프와 일부 안전한 문자 제외)
+        dangerous_chars = ['&', ';', '`', '$', '(', ')', '{', '}', '[', ']', '<', '>', '\\', '"', "'", '*', '?']
+        for char in dangerous_chars:
+            if char in cmd:
+                return {'valid': False, 'message': f'허용되지 않은 특수문자: {char}'}
+        
+        # 연속된 하이픈 검사 (주입 공격 방지)
+        if '--' in cmd and not any(allowed in cmd for allowed in ['--More--', '-- More --']):
+            # show 명령어에서 옵션으로 사용되는 경우는 허용
+            if not cmd.startswith('show') or cmd.count('--') > 2:
+                return {'valid': False, 'message': '의심스러운 연속 하이픈 패턴'}
+        
+        # 허용된 명령어 패턴들
+        allowed_patterns = [
+            # 기본 설정 명령어 (정확한 매칭)
+            r'^set\s+cli\s+pager\s+off\s*$',
+            r'^set\s+cli\s+scripting-mode\s+on\s*$',
+            
+            # show 명령어 (파이프와 기본 옵션 허용, 슬래시와 숫자 포함)
+            r'^show\s+[\w\s\-|./]+$',
+            
+            # debug로 시작하고 show 또는 dump가 포함되는 명령어
+            r'^debug\s+.*(?:show|dump)[\w\s\-|./]*$',
+        ]
+        
+        # 패턴 매칭 확인
+        for pattern in allowed_patterns:
+            if re.match(pattern, cmd, re.IGNORECASE):
+                return {'valid': True, 'message': '허용된 명령어'}
+        
+        # 허용되지 않은 명령어
+        first_word = cmd.split()[0] if cmd.split() else "unknown"
+        return {'valid': False, 'message': f'허용되지 않은 명령어: {first_word}'}
     
     def _enhance_command(self, command: str) -> str:
         """명령어에 추가 옵션 적용"""
@@ -467,6 +526,10 @@ class SSHChecker:
             text = text.replace(char, replacement)
         
         return text
+    
+    def test_command_validation(self, command: str) -> Dict:
+        """명령어 검증 테스트 (연결 없이 검증만 수행)"""
+        return self._validate_command(command)
     
     def disconnect(self):
         """SSH 연결 종료"""
