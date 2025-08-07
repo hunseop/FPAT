@@ -1,0 +1,16 @@
+# Palo Alto Parameter Checker - Build Requirements
+# 빌드용 의존성 패키지 목록
+
+# 런타임 의존성
+Flask==2.3.3
+Flask-CORS==4.0.0
+paramiko==3.3.1
+openpyxl==3.1.2
+
+# 빌드 도구
+pyinstaller==6.3.0
+
+# 추가 의존성 (PyInstaller에서 필요할 수 있음)
+cryptography>=3.4.8
+bcrypt>=3.2.0
+pynacl>=1.4.0
