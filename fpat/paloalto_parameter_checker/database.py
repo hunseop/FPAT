@@ -4,14 +4,17 @@ SQLite 데이터베이스 관리 모듈
 """
 
 import sqlite3
+import sys
 import json
 import os
 from datetime import datetime
 from typing import List, Dict, Optional
+from utils import get_resource_path
 
 class DatabaseManager:
     def __init__(self, db_path: str = "data/parameters.db"):
-        self.db_path = db_path
+        # PyInstaller 환경에서 올바른 경로 설정
+        self.db_path = get_resource_path(db_path)
         self.init_database()
     
     def init_database(self):

@@ -4,17 +4,19 @@ Excel 리포트 생성 모듈
 """
 
 import os
+import sys
 import json
 from datetime import datetime
 from typing import List, Dict
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 from openpyxl.utils import get_column_letter
+from utils import get_resource_path, ensure_dir
 
 class ReportGenerator:
     def __init__(self, reports_dir: str = "reports"):
-        self.reports_dir = reports_dir
-        os.makedirs(reports_dir, exist_ok=True)
+        # PyInstaller 환경에서 올바른 경로 설정
+        self.reports_dir = ensure_dir(get_resource_path(reports_dir))
     
     def generate_excel_report(self, results: List[Dict], summary: Dict, 
                              filename: str = None) -> Dict:

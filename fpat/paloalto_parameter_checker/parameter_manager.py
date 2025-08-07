@@ -4,14 +4,17 @@
 """
 
 import json
+import sys
 import os
 from typing import List, Dict, Optional
 from database import DatabaseManager
+from utils import get_resource_path
 
 class ParameterManager:
     def __init__(self, db_path: str = "data/parameters.db"):
         self.db = DatabaseManager(db_path)
-        self.default_params_file = "data/default_params.json"
+        # PyInstaller 환경에서 올바른 경로 설정
+        self.default_params_file = get_resource_path("data/default_params.json")
         
         # 기본 매개변수가 없으면 초기화
         if not self.db.get_all_parameters():
