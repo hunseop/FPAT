@@ -24,12 +24,12 @@ python build.py
 
 #### Windows:
 ```cmd
-pyinstaller --clean --noconfirm --onedir --console --name=ParameterChecker --add-data=templates;templates --add-data=static;static --add-data=data;data --hidden-import=flask_cors --hidden-import=sqlite3 --hidden-import=openpyxl --hidden-import=paramiko run.py
+pyinstaller --clean --noconfirm --onedir --console --name=ParameterChecker --add-data=templates;templates --add-data=static;static --add-data=data;data --hidden-import=flask_cors --hidden-import=sqlite3 --hidden-import=openpyxl --hidden-import=paramiko app.py
 ```
 
 #### Linux/Mac:
 ```bash
-pyinstaller --clean --noconfirm --onedir --console --name=ParameterChecker --add-data=templates:templates --add-data=static:static --add-data=data:data --hidden-import=flask_cors --hidden-import=sqlite3 --hidden-import=openpyxl --hidden-import=paramiko run.py
+pyinstaller --clean --noconfirm --onedir --console --name=ParameterChecker --add-data=templates:templates --add-data=static:static --add-data=data:data --hidden-import=flask_cors --hidden-import=sqlite3 --hidden-import=openpyxl --hidden-import=paramiko app.py
 ```
 
 ## 📁 결과물

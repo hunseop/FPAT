@@ -144,8 +144,15 @@ class ParameterChecker {
                 this.showAlert('Check completed.', 'success');
                 
                 // 다운로드 버튼 활성화
-                document.getElementById('downloadExcelBtn').disabled = false;
-                document.getElementById('downloadHtmlBtn').disabled = false;
+                const downloadExcelBtn = document.getElementById('downloadExcelBtn');
+                if (downloadExcelBtn) {
+                    downloadExcelBtn.disabled = false;
+                }
+                
+                const downloadHtmlBtn = document.getElementById('downloadHtmlBtn');
+                if (downloadHtmlBtn) {
+                    downloadHtmlBtn.disabled = false;
+                }
             } else {
                 this.showAlert(result.message, 'danger');
             }
@@ -163,27 +170,29 @@ class ParameterChecker {
         const resultsTableBody = document.getElementById('resultsTableBody');
 
         if (checking) {
-            button.disabled = true;
-            buttonText.textContent = 'Checking...';
-            spinner.classList.remove('d-none');
+            if (button) button.disabled = true;
+            if (buttonText) buttonText.textContent = 'Checking...';
+            if (spinner) spinner.classList.remove('d-none');
             
             // 테이블에 로딩 표시
-            resultsTableBody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="text-center py-4">
-                        <div class="d-flex justify-content-center align-items-center">
-                            <div class="spinner-border text-primary me-3" role="status">
-                                <span class="visually-hidden">Loading...</span>
+            if (resultsTableBody) {
+                resultsTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <div class="d-flex justify-content-center align-items-center">
+                                <div class="spinner-border text-primary me-3" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <span class="text-muted">Checking parameters... Please wait.</span>
                             </div>
-                            <span class="text-muted">Checking parameters... Please wait.</span>
-                        </div>
-                    </td>
-                </tr>
-            `;
+                        </td>
+                    </tr>
+                `;
+            }
         } else {
-            button.disabled = false;
-            buttonText.textContent = 'Check';
-            spinner.classList.add('d-none');
+            if (button) button.disabled = false;
+            if (buttonText) buttonText.textContent = 'Check';
+            if (spinner) spinner.classList.add('d-none');
         }
     }
 
