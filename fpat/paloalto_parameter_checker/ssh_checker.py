@@ -655,6 +655,13 @@ class ParameterChecker:
                         results.append(result)
                         summary['error'] += 1
         
+        # 결과를 우선순위별로 정렬 (FAIL > ERROR > PASS)
+        status_priority = {'FAIL': 1, 'ERROR': 2, 'PASS': 3}
+        results.sort(key=lambda x: (
+            status_priority.get(x['status'], 4),  # 상태별 우선순위
+            x['parameter']  # 같은 상태인 경우 파라미터 이름순
+        ))
+        
         return {
             'success': True,
             'results': results,
