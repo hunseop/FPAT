@@ -58,9 +58,54 @@ def clean_build():
                 os.remove(path)
                 print(f"   삭제: {path}")
 
-def build_application():
-    """PyInstaller로 애플리케이션 빌드"""
-    print("🔨 PyInstaller로 빌드 시작...")
+def build_application_basic():
+    """기본 PyInstaller 명령어로 빌드"""
+    print("🔨 PyInstaller로 기본 빌드 시작...")
+    
+    # 기본 PyInstaller 명령어
+    cmd = [
+        sys.executable, '-m', 'PyInstaller',
+        '--clean',
+        '--noconfirm',
+        '--onedir',                    # 폴더 형태로 빌드
+        '--console',                   # 콘솔 모드
+        '--name=ParameterChecker',     # 실행 파일 이름
+        '--add-data=templates:templates',  # templates 폴더 포함
+        '--add-data=static:static',        # static 폴더 포함
+        '--add-data=data:data',            # data 폴더 포함
+        '--hidden-import=flask_cors',      # 숨겨진 import
+        '--hidden-import=sqlite3',
+        '--hidden-import=openpyxl',
+        '--hidden-import=paramiko',
+        'run.py'                       # 메인 스크립트
+    ]
+    
+    # Windows와 Linux/Mac에서 경로 구분자 다름
+    if os.name == 'nt':  # Windows
+        cmd[cmd.index('--add-data=templates:templates')] = '--add-data=templates;templates'
+        cmd[cmd.index('--add-data=static:static')] = '--add-data=static;static'
+        cmd[cmd.index('--add-data=data:data')] = '--add-data=data;data'
+    
+    print(f"실행 명령어: {' '.join(cmd)}")
+    
+    try:
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        print("✅ 빌드 성공!")
+        return True
+    except subprocess.CalledProcessError as e:
+        print("❌ 빌드 실패!")
+        print(f"오류: {e}")
+        if e.stderr:
+            print(f"stderr: {e.stderr}")
+        return False
+
+def build_application_spec():
+    """spec 파일을 사용한 빌드"""
+    print("🔨 PyInstaller로 spec 파일 빌드 시작...")
+    
+    if not os.path.exists('parameter_checker.spec'):
+        print("❌ parameter_checker.spec 파일이 없습니다.")
+        return False
     
     # spec 파일 사용하여 빌드
     cmd = [
@@ -79,12 +124,18 @@ def build_application():
     except subprocess.CalledProcessError as e:
         print("❌ 빌드 실패!")
         print(f"오류: {e}")
-        print(f"stderr: {e.stderr}")
+        if e.stderr:
+            print(f"stderr: {e.stderr}")
         return False
 
 def create_launcher_script():
     """편리한 실행을 위한 런처 스크립트 생성"""
     print("📝 런처 스크립트 생성 중...")
+    
+    # dist/ParameterChecker 폴더가 있는지 확인
+    if not os.path.exists('dist/ParameterChecker'):
+        print("❌ dist/ParameterChecker 폴더가 없습니다.")
+        return False
     
     # Windows용 배치 파일
     bat_content = '''@echo off
@@ -139,6 +190,7 @@ fi
     
     print("   - start.bat (Windows용)")
     print("   - start.sh (Linux/Mac용)")
+    return True
 
 def create_readme():
     """사용법 README 파일 생성"""
@@ -209,12 +261,23 @@ def main():
     # 2. 이전 빌드 정리
     clean_build()
     
-    # 3. 애플리케이션 빌드
-    if not build_application():
+    # 3. 빌드 방법 선택
+    use_spec = os.path.exists('parameter_checker.spec')
+    
+    if use_spec:
+        print("📋 spec 파일을 발견했습니다. spec 파일을 사용하여 빌드합니다.")
+        build_success = build_application_spec()
+    else:
+        print("📋 spec 파일이 없습니다. 기본 설정으로 빌드합니다.")
+        build_success = build_application_basic()
+    
+    if not build_success:
         return False
     
     # 4. 추가 파일들 생성
-    create_launcher_script()
+    if not create_launcher_script():
+        print("⚠️ 런처 스크립트 생성에 실패했지만 빌드는 완료되었습니다.")
+    
     create_readme()
     
     print("\n✅ 빌드 완료!")

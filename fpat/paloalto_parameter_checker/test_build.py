@@ -53,8 +53,11 @@ def test_file_structure():
     required_files = [
         'app.py',
         'run.py', 
+        'requirements.txt'
+    ]
+    
+    optional_files = [
         'parameter_checker.spec',
-        'requirements.txt',
         'requirements-build.txt'
     ]
     
@@ -66,13 +69,20 @@ def test_file_structure():
     
     all_exists = True
     
-    # 파일 확인
+    # 필수 파일 확인
     for file_name in required_files:
         if os.path.exists(file_name):
             print(f"   ✅ {file_name}")
         else:
             print(f"   ❌ {file_name} - 누락")
             all_exists = False
+    
+    # 선택적 파일 확인
+    for file_name in optional_files:
+        if os.path.exists(file_name):
+            print(f"   ✅ {file_name} (선택사항)")
+        else:
+            print(f"   ⚪ {file_name} - 없음 (기본값 사용)")
     
     # 디렉토리 확인
     for dir_name in required_dirs:
@@ -109,42 +119,34 @@ def test_app_import():
         print(f"   ❌ import 실패: {e}")
         return False
 
-def test_spec_file():
-    """spec 파일 구문 확인"""
-    print("\n📋 spec 파일 구문 확인...")
+def test_build_method():
+    """빌드 방법 확인"""
+    print("\n📋 빌드 방법 확인...")
     
-    try:
-        with open('parameter_checker.spec', 'r', encoding='utf-8') as f:
-            spec_content = f.read()
-            
-        # 기본적인 구문 검사
-        if 'Analysis(' in spec_content:
-            print("   ✅ Analysis 섹션 존재")
-        else:
-            print("   ❌ Analysis 섹션 누락")
-            return False
-            
-        if 'EXE(' in spec_content:
-            print("   ✅ EXE 섹션 존재")
-        else:
-            print("   ❌ EXE 섹션 누락")
-            return False
-            
-        if 'COLLECT(' in spec_content:
-            print("   ✅ COLLECT 섹션 존재")
-        else:
-            print("   ❌ COLLECT 섹션 누락")
-            return False
-            
-        print("   ✅ spec 파일 구문 정상")
-        return True
+    has_spec = os.path.exists('parameter_checker.spec')
+    
+    if has_spec:
+        print("   ✅ spec 파일 발견 - spec 파일을 사용한 빌드")
         
-    except FileNotFoundError:
-        print("   ❌ parameter_checker.spec 파일 없음")
-        return False
-    except Exception as e:
-        print(f"   ❌ spec 파일 읽기 실패: {e}")
-        return False
+        try:
+            with open('parameter_checker.spec', 'r', encoding='utf-8') as f:
+                spec_content = f.read()
+                
+            # 기본적인 구문 검사
+            if 'Analysis(' in spec_content and 'EXE(' in spec_content and 'COLLECT(' in spec_content:
+                print("   ✅ spec 파일 구문 정상")
+                return True
+            else:
+                print("   ❌ spec 파일 구문 오류")
+                return False
+                
+        except Exception as e:
+            print(f"   ❌ spec 파일 읽기 실패: {e}")
+            return False
+    else:
+        print("   ✅ spec 파일 없음 - 기본 설정으로 빌드")
+        print("   ℹ️ PyInstaller 기본 명령어 사용")
+        return True
 
 def main():
     """테스트 메인 함수"""
@@ -156,7 +158,7 @@ def main():
         ("필수 패키지", test_dependencies), 
         ("파일 구조", test_file_structure),
         ("앱 Import", test_app_import),
-        ("Spec 파일", test_spec_file)
+        ("빌드 방법", test_build_method)
     ]
     
     results = []
@@ -186,7 +188,13 @@ def main():
     
     if passed == total:
         print("\n🎉 모든 테스트 통과! 빌드 준비 완료")
-        print("빌드 실행: python build.py")
+        
+        # 빌드 방법 안내
+        if os.path.exists('parameter_checker.spec'):
+            print("빌드 실행: python build.py (spec 파일 사용)")
+        else:
+            print("빌드 실행: python build.py (기본 설정 사용)")
+            
         return True
     else:
         print(f"\n⚠️ {total - passed}개 테스트 실패")
