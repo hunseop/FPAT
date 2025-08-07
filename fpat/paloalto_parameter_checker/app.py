@@ -16,7 +16,7 @@ from ssh_checker import ParameterChecker
 from report import ReportGenerator
 from utils import get_resource_path
 
-# PyInstaller 환경에서 올바른 경로 설정
+# PyInstaller 환경에서 올바른 경로 설정 (패키지된 리소스)
 template_dir = get_resource_path('templates')
 static_dir = get_resource_path('static')
 

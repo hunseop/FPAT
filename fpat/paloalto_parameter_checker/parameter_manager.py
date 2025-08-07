@@ -8,12 +8,12 @@ import sys
 import os
 from typing import List, Dict, Optional
 from database import DatabaseManager
-from utils import get_resource_path
+from utils import get_resource_path, get_data_path
 
 class ParameterManager:
     def __init__(self, db_path: str = "data/parameters.db"):
         self.db = DatabaseManager(db_path)
-        # PyInstaller 환경에서 올바른 경로 설정
+        # PyInstaller 환경에서 올바른 경로 설정 (패키지된 리소스)
         self.default_params_file = get_resource_path("data/default_params.json")
         
         # 기본 매개변수가 없으면 초기화

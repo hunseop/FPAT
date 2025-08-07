@@ -11,12 +11,12 @@ from typing import List, Dict
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 from openpyxl.utils import get_column_letter
-from utils import get_resource_path, ensure_dir
+from utils import get_data_path, ensure_dir
 
 class ReportGenerator:
     def __init__(self, reports_dir: str = "reports"):
-        # PyInstaller 환경에서 올바른 경로 설정
-        self.reports_dir = ensure_dir(get_resource_path(reports_dir))
+        # PyInstaller 환경에서 올바른 경로 설정 (사용자 데이터)
+        self.reports_dir = ensure_dir(get_data_path(reports_dir))
     
     def generate_excel_report(self, results: List[Dict], summary: Dict, 
                              filename: str = None) -> Dict:

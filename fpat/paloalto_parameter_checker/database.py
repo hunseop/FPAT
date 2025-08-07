@@ -9,12 +9,12 @@ import json
 import os
 from datetime import datetime
 from typing import List, Dict, Optional
-from utils import get_resource_path
+from utils import get_data_path
 
 class DatabaseManager:
     def __init__(self, db_path: str = "data/parameters.db"):
-        # PyInstaller 환경에서 올바른 경로 설정
-        self.db_path = get_resource_path(db_path)
+        # PyInstaller 환경에서 올바른 경로 설정 (사용자 데이터)
+        self.db_path = get_data_path(db_path)
         self.init_database()
     
     def init_database(self):

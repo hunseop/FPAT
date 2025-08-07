@@ -28,51 +28,64 @@ reports_dir = "reports"  # → ./_internal/reports/ (잘못된 경로)
 ### 1. 공통 유틸리티 함수 생성
 **파일**: `utils.py`
 ```python
-def get_base_dir():
-    """PyInstaller 빌드 환경에서 올바른 기준 경로 반환"""
+def get_bundle_dir():
+    """PyInstaller 번들 내부 경로 (패키지된 리소스용)"""
     if getattr(sys, 'frozen', False):
-        # PyInstaller로 빌드된 실행 파일인 경우
+        # _MEIPASS 경로 (임시 압축 해제 경로)
+        return sys._MEIPASS
+    else:
+        # 개발 환경인 경우
+        return os.path.dirname(os.path.abspath(__file__))
+
+def get_app_dir():
+    """애플리케이션 데이터 디렉토리 (사용자 데이터용)"""
+    if getattr(sys, 'frozen', False):
+        # 실행 파일이 있는 디렉토리
         return os.path.dirname(sys.executable)
     else:
         # 개발 환경인 경우
         return os.path.dirname(os.path.abspath(__file__))
 
 def get_resource_path(relative_path):
-    """리소스 파일의 절대 경로 반환 (PyInstaller 호환)"""
-    base_dir = get_base_dir()
-    return os.path.join(base_dir, relative_path)
+    """패키지된 리소스 파일 경로 (templates, static, data/default_params.json)"""
+    return os.path.join(get_bundle_dir(), relative_path)
+
+def get_data_path(relative_path):
+    """사용자 데이터 파일 경로 (database, reports)"""
+    return os.path.join(get_app_dir(), relative_path)
 ```
 
 ### 2. 각 모듈별 수정사항
 
-#### ReportGenerator (`report.py`)
+#### ReportGenerator (`report.py`) - 사용자 데이터
 ```python
 # 수정 전
 self.reports_dir = reports_dir
 
 # 수정 후  
-self.reports_dir = ensure_dir(get_resource_path(reports_dir))
+self.reports_dir = ensure_dir(get_data_path(reports_dir))
 ```
 
-#### DatabaseManager (`database.py`)
+#### DatabaseManager (`database.py`) - 사용자 데이터
 ```python
 # 수정 전
 self.db_path = db_path
 
 # 수정 후
-self.db_path = get_resource_path(db_path)
+self.db_path = get_data_path(db_path)
 ```
 
-#### ParameterManager (`parameter_manager.py`)
+#### ParameterManager (`parameter_manager.py`) - 혼합
 ```python
 # 수정 전
 self.default_params_file = "data/default_params.json"
 
-# 수정 후
+# 수정 후 (패키지된 리소스)
 self.default_params_file = get_resource_path("data/default_params.json")
+# 데이터베이스는 DatabaseManager에서 get_data_path 사용
 ```
 
-#### Flask App (`app.py`)
+#### Flask App (`app.py`) - 패키지된 리소스
 ```python
 # 수정 전
 app = Flask(__name__)
@@ -113,28 +126,32 @@ paloalto_parameter_checker/
 ```
 ParameterChecker/
 ├── ParameterChecker.exe
-├── utils.py           # 패키지됨
-├── reports/           # 실행파일 위치에 생성
-├── data/              # 실행파일 위치에 생성  
-├── templates/         # 패키지됨
-├── static/            # 패키지됨
+├── reports/           # 실행파일 위치에 생성 (사용자 데이터)
+├── data/              # 실행파일 위치에 생성 (사용자 데이터)
 └── _internal/         # PyInstaller 내부 파일들
+    ├── utils.py       # 패키지됨
+    ├── templates/     # 패키지됨 (Flask 리소스)
+    ├── static/        # 패키지됨 (Flask 리소스)
+    └── data/
+        └── default_params.json  # 패키지됨 (초기 설정)
 ```
 
 ## 🎯 핵심 포인트
 
-### sys.frozen 활용
+### sys.frozen과 sys._MEIPASS 활용
 ```python
 if getattr(sys, 'frozen', False):
     # PyInstaller 빌드 환경
-    base = os.path.dirname(sys.executable)
+    bundle_dir = sys._MEIPASS          # 패키지된 리소스
+    app_dir = os.path.dirname(sys.executable)  # 사용자 데이터
 else:
     # 개발 환경
-    base = os.path.dirname(os.path.abspath(__file__))
+    bundle_dir = app_dir = os.path.dirname(os.path.abspath(__file__))
 ```
 
-### 경로 통일화
-- 모든 모듈에서 `get_resource_path()` 사용
+### 경로 구분과 통일화
+- **패키지된 리소스**: `get_resource_path()` → `sys._MEIPASS`
+- **사용자 데이터**: `get_data_path()` → 실행 파일 위치
 - 상대 경로 → 절대 경로 변환으로 안정성 확보
 - 개발/배포 환경 자동 감지
 
