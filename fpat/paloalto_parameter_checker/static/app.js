@@ -144,8 +144,15 @@ class ParameterChecker {
                 this.showAlert('Check completed.', 'success');
                 
                 // 다운로드 버튼 활성화
-                document.getElementById('downloadExcelBtn').disabled = false;
-                document.getElementById('downloadHtmlBtn').disabled = false;
+                const downloadExcelBtn = document.getElementById('downloadExcelBtn');
+                if (downloadExcelBtn) {
+                    downloadExcelBtn.disabled = false;
+                }
+                
+                const downloadHtmlBtn = document.getElementById('downloadHtmlBtn');
+                if (downloadHtmlBtn) {
+                    downloadHtmlBtn.disabled = false;
+                }
             } else {
                 this.showAlert(result.message, 'danger');
             }
@@ -160,15 +167,32 @@ class ParameterChecker {
         const button = document.getElementById('checkButton');
         const buttonText = document.getElementById('checkButtonText');
         const spinner = document.getElementById('checkSpinner');
+        const resultsTableBody = document.getElementById('resultsTableBody');
 
         if (checking) {
-            button.disabled = true;
-            buttonText.textContent = 'Checking...';
-            spinner.classList.remove('d-none');
+            if (button) button.disabled = true;
+            if (buttonText) buttonText.textContent = 'Checking...';
+            if (spinner) spinner.classList.remove('d-none');
+            
+            // 테이블에 로딩 표시
+            if (resultsTableBody) {
+                resultsTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <div class="d-flex justify-content-center align-items-center">
+                                <div class="spinner-border text-primary me-3" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <span class="text-muted">Checking parameters... Please wait.</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
         } else {
-            button.disabled = false;
-            buttonText.textContent = 'Check';
-            spinner.classList.add('d-none');
+            if (button) button.disabled = false;
+            if (buttonText) buttonText.textContent = 'Check';
+            if (spinner) spinner.classList.add('d-none');
         }
     }
 
@@ -180,11 +204,23 @@ class ParameterChecker {
         document.getElementById('errorCount').textContent = summary.error;
         document.getElementById('summarySection').classList.remove('d-none');
 
+        // 결과를 우선순위별로 정렬 (FAIL > ERROR > PASS)
+        const statusPriority = { 'FAIL': 1, 'ERROR': 2, 'PASS': 3 };
+        const sortedResults = results.sort((a, b) => {
+            const priorityA = statusPriority[a.status] || 4;
+            const priorityB = statusPriority[b.status] || 4;
+            if (priorityA !== priorityB) {
+                return priorityA - priorityB;
+            }
+            // 같은 상태인 경우 파라미터 이름으로 정렬
+            return a.parameter.localeCompare(b.parameter);
+        });
+
         // 결과 테이블 업데이트
         const tbody = document.getElementById('resultsTableBody');
         tbody.innerHTML = '';
 
-        results.forEach(result => {
+        sortedResults.forEach(result => {
             const row = document.createElement('tr');
             row.className = `status-${result.status}`;
             
@@ -268,17 +304,33 @@ class ParameterChecker {
         tbody.innerHTML = '';
 
         if (parameters.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="text-center text-muted py-4">
-                        No parameters registered. Add a new parameter.
-                    </td>
-                </tr>
-            `;
+            const searchInput = document.getElementById('parameterSearchInput');
+            const searchText = searchInput ? searchInput.value.trim() : '';
+            
+            if (searchText) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="fa-solid fa-search me-2"></i>
+                            No parameters found matching "<strong>${searchText}</strong>".
+                            <br><small>Try different keywords or clear the search.</small>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="fa-solid fa-plus-circle me-2"></i>
+                            No parameters registered. Add a new parameter to get started.
+                        </td>
+                    </tr>
+                `;
+            }
             return;
         }
 
-        this.currentParameters.forEach(param => {
+        parameters.forEach(param => {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td><strong>${param.name}</strong></td>

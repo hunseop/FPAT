@@ -1,0 +1,349 @@
+#!/usr/bin/env python3
+"""
+Palo Alto Parameter Checker 빌드 스크립트
+PyInstaller를 사용하여 실행 파일 생성
+"""
+
+import os
+import sys
+import subprocess
+import shutil
+from pathlib import Path
+
+def check_dependencies():
+    """필요한 패키지들이 설치되어 있는지 확인"""
+    required_packages = [
+        'pyinstaller',
+        'flask',
+        'flask-cors',
+        'paramiko',
+        'openpyxl'
+    ]
+    
+    missing_packages = []
+    
+    for package in required_packages:
+        try:
+            __import__(package.replace('-', '_'))
+        except ImportError:
+            missing_packages.append(package)
+    
+    if missing_packages:
+        print("❌ 다음 패키지들이 설치되지 않았습니다:")
+        for package in missing_packages:
+            print(f"   - {package}")
+        print("\n설치 명령어:")
+        print(f"pip install {' '.join(missing_packages)}")
+        return False
+    
+    return True
+
+def check_unnecessary_packages():
+    """불필요한 대용량 패키지들이 설치되어 있는지 확인"""
+    print("\n📦 대용량 패키지 확인 (빌드 용량 최적화)...")
+    
+    large_packages = {
+        'numpy': 'NumPy (과학 계산용 - 이 프로젝트에서 미사용)',
+        'pandas': 'Pandas (데이터 분석용 - 이 프로젝트에서 미사용)',
+        'matplotlib': 'Matplotlib (그래프 생성용 - 이 프로젝트에서 미사용)',
+        'scipy': 'SciPy (과학 계산용 - 이 프로젝트에서 미사용)',
+        'tensorflow': 'TensorFlow (머신러닝용 - 이 프로젝트에서 미사용)',
+        'torch': 'PyTorch (머신러닝용 - 이 프로젝트에서 미사용)'
+    }
+    
+    installed_large_packages = []
+    
+    for package, description in large_packages.items():
+        try:
+            __import__(package)
+            installed_large_packages.append((package, description))
+        except ImportError:
+            continue
+    
+    if installed_large_packages:
+        print("⚠️ 다음 대용량 패키지들이 설치되어 있습니다:")
+        total_impact = 0
+        for package, description in installed_large_packages:
+            size_estimate = {'numpy': '15-20MB', 'pandas': '20-30MB', 'matplotlib': '20-30MB', 
+                           'scipy': '30-40MB', 'tensorflow': '100-200MB', 'torch': '100-500MB'}
+            size = size_estimate.get(package, '10-50MB')
+            print(f"   📦 {package} - {description} (~{size})")
+            
+        print(f"\n💡 빌드 용량 절약 팁:")
+        print(f"   - 이 패키지들은 --exclude-module 옵션으로 제외됩니다")
+        print(f"   - 필요없다면 제거하여 개발환경도 가볍게 만들 수 있습니다:")
+        print(f"   - pip uninstall {' '.join([pkg for pkg, _ in installed_large_packages])}")
+    else:
+        print("✅ 대용량 패키지가 설치되지 않았습니다. 빌드 용량이 최적화됩니다!")
+    
+    return True
+
+def clean_build():
+    """이전 빌드 결과물 정리"""
+    print("🧹 이전 빌드 결과물 정리 중...")
+    
+    paths_to_clean = [
+        'build',
+        'dist',
+        '__pycache__',
+        '*.spec'
+    ]
+    
+    for path in paths_to_clean:
+        if os.path.exists(path):
+            if os.path.isdir(path):
+                shutil.rmtree(path)
+                print(f"   삭제: {path}/")
+            else:
+                os.remove(path)
+                print(f"   삭제: {path}")
+
+def build_application_basic():
+    """기본 PyInstaller 명령어로 빌드"""
+    print("🔨 PyInstaller로 기본 빌드 시작...")
+    
+    # 기본 PyInstaller 명령어
+    cmd = [
+        sys.executable, '-m', 'PyInstaller',
+        '--clean',
+        '--noconfirm',
+        '--onedir',                    # 폴더 형태로 빌드
+        '--console',                   # 콘솔 모드
+        '--name=ParameterChecker',     # 실행 파일 이름
+        '--add-data=templates:templates',  # templates 폴더 포함
+        '--add-data=static:static',        # static 폴더 포함
+        '--add-data=data:data',            # data 폴더 포함
+        '--hidden-import=flask_cors',      # 숨겨진 import
+        '--hidden-import=sqlite3',
+        '--hidden-import=openpyxl',
+        '--hidden-import=paramiko',
+        '--exclude-module=numpy',      # numpy 제외 (프로젝트에서 사용하지 않음)
+        '--exclude-module=pandas',     # pandas 제외 (혹시 포함되는 경우)
+        '--exclude-module=matplotlib', # matplotlib 제외 (혹시 포함되는 경우)
+        '--exclude-module=scipy',      # scipy 제외 (혹시 포함되는 경우)
+        'app.py'                       # 메인 스크립트
+    ]
+    
+    # Windows와 Linux/Mac에서 경로 구분자 다름
+    if os.name == 'nt':  # Windows
+        cmd[cmd.index('--add-data=templates:templates')] = '--add-data=templates;templates'
+        cmd[cmd.index('--add-data=static:static')] = '--add-data=static;static'
+        cmd[cmd.index('--add-data=data:data')] = '--add-data=data;data'
+    
+    print(f"실행 명령어: {' '.join(cmd)}")
+    
+    try:
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        print("✅ 빌드 성공!")
+        return True
+    except subprocess.CalledProcessError as e:
+        print("❌ 빌드 실패!")
+        print(f"오류: {e}")
+        if e.stderr:
+            print(f"stderr: {e.stderr}")
+        return False
+
+def build_application_spec():
+    """spec 파일을 사용한 빌드"""
+    print("🔨 PyInstaller로 spec 파일 빌드 시작...")
+    
+    if not os.path.exists('parameter_checker.spec'):
+        print("❌ parameter_checker.spec 파일이 없습니다.")
+        return False
+    
+    # spec 파일 사용하여 빌드
+    cmd = [
+        sys.executable, '-m', 'PyInstaller',
+        '--clean',
+        '--noconfirm',
+        'parameter_checker.spec'
+    ]
+    
+    print(f"실행 명령어: {' '.join(cmd)}")
+    
+    try:
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        print("✅ 빌드 성공!")
+        return True
+    except subprocess.CalledProcessError as e:
+        print("❌ 빌드 실패!")
+        print(f"오류: {e}")
+        if e.stderr:
+            print(f"stderr: {e.stderr}")
+        return False
+
+def create_launcher_script():
+    """편리한 실행을 위한 런처 스크립트 생성"""
+    print("📝 런처 스크립트 생성 중...")
+    
+    # dist/ParameterChecker 폴더가 있는지 확인
+    if not os.path.exists('dist/ParameterChecker'):
+        print("❌ dist/ParameterChecker 폴더가 없습니다.")
+        return False
+    
+    # Windows용 배치 파일
+    bat_content = '''@echo off
+echo ================================================
+echo 🛡️  Palo Alto Parameter Checker v2.0
+echo ================================================
+echo 📍 서버 주소: http://localhost:5012
+echo 🔗 브라우저에서 위 주소로 접속하세요
+echo ================================================
+echo.
+
+cd /d "%~dp0"
+start "" "http://localhost:5012"
+ParameterChecker.exe
+pause
+'''
+    
+    with open('dist/ParameterChecker/start.bat', 'w', encoding='utf-8') as f:
+        f.write(bat_content)
+    
+    # Linux/Mac용 셸 스크립트
+    sh_content = '''#!/bin/bash
+echo "================================================"
+echo "🛡️  Palo Alto Parameter Checker v2.0"
+echo "================================================"
+echo "📍 서버 주소: http://localhost:5012"
+echo "🔗 브라우저에서 위 주소로 접속하세요"
+echo "================================================"
+echo
+
+cd "$(dirname "$0")"
+
+# 브라우저 열기 (백그라운드)
+if command -v xdg-open > /dev/null 2>&1; then
+    xdg-open "http://localhost:5012" &
+elif command -v open > /dev/null 2>&1; then
+    open "http://localhost:5012" &
+fi
+
+# 애플리케이션 실행
+./ParameterChecker
+'''
+    
+    with open('dist/ParameterChecker/start.sh', 'w', encoding='utf-8') as f:
+        f.write(sh_content)
+    
+    # 실행 권한 추가 (Linux/Mac)
+    try:
+        os.chmod('dist/ParameterChecker/start.sh', 0o755)
+    except:
+        pass
+    
+    print("   - start.bat (Windows용)")
+    print("   - start.sh (Linux/Mac용)")
+    return True
+
+def create_readme():
+    """사용법 README 파일 생성"""
+    print("📄 README 파일 생성 중...")
+    
+    readme_content = '''# Palo Alto Parameter Checker v2.0
+
+## 실행 방법
+
+### Windows
+- `start.bat` 파일을 더블클릭하여 실행
+
+### Linux / macOS
+- 터미널에서 `./start.sh` 실행
+- 또는 `./ParameterChecker` 직접 실행
+
+## 사용법
+
+1. 프로그램 실행 후 자동으로 브라우저가 열립니다
+2. 브라우저에서 http://localhost:5012 접속
+3. Palo Alto 장비 정보 입력:
+   - Host: 장비 IP 또는 호스트명
+   - Username: SSH 사용자명
+   - Password: SSH 비밀번호
+4. "Check" 버튼 클릭하여 파라미터 점검 실행
+5. 결과 확인 및 Excel 리포트 다운로드
+
+## 주요 기능
+
+- 🔍 **파라미터 검색**: 실시간 파라미터 필터링
+- 🔐 **보안 강화**: 입력값 검증 및 명령어 화이트리스트
+- 📊 **결과 정렬**: FAIL → ERROR → PASS 순서로 우선순위 표시
+- 📈 **Excel 리포트**: 점검 결과 Excel 파일 다운로드
+- ⚡ **실시간 피드백**: 점검 진행 상황 표시
+
+## 문제 해결
+
+### 포트 충돌
+- 5012 포트가 사용 중인 경우 다른 포트 사용
+- 프로그램 종료 후 재실행
+
+### 브라우저 접속 안됨
+- 수동으로 http://localhost:5012 접속
+- 방화벽 설정 확인
+
+### SSH 연결 실패
+- 네트워크 연결 확인
+- SSH 계정 정보 확인
+- 장비 SSH 서비스 상태 확인
+
+## 지원
+
+문제 발생 시 로그 파일과 함께 문의하세요.
+'''
+    
+    with open('dist/ParameterChecker/README.txt', 'w', encoding='utf-8') as f:
+        f.write(readme_content)
+
+def main():
+    """메인 빌드 프로세스"""
+    print("🚀 Palo Alto Parameter Checker 빌드 시작")
+    print("=" * 60)
+    
+    # 1. 의존성 확인
+    if not check_dependencies():
+        return False
+    
+    # 2. 대용량 패키지 확인 (빌드 용량 최적화)
+    check_unnecessary_packages()
+    
+    # 3. 이전 빌드 정리
+    clean_build()
+    
+    # 4. 빌드 방법 선택
+    use_spec = os.path.exists('parameter_checker.spec')
+    
+    if use_spec:
+        print("📋 spec 파일을 발견했습니다. spec 파일을 사용하여 빌드합니다.")
+        build_success = build_application_spec()
+    else:
+        print("📋 spec 파일이 없습니다. 기본 설정으로 빌드합니다.")
+        build_success = build_application_basic()
+    
+    if not build_success:
+        return False
+    
+    # 5. 추가 파일들 생성
+    if not create_launcher_script():
+        print("⚠️ 런처 스크립트 생성에 실패했지만 빌드는 완료되었습니다.")
+    
+    create_readme()
+    
+    print("\n✅ 빌드 완료!")
+    print("=" * 60)
+    print("📦 빌드 결과물: dist/ParameterChecker/")
+    print("🚀 실행 방법:")
+    print("   Windows: start.bat 더블클릭")
+    print("   Linux/Mac: ./start.sh 실행")
+    print("=" * 60)
+    
+    return True
+
+if __name__ == '__main__':
+    try:
+        success = main()
+        sys.exit(0 if success else 1)
+    except KeyboardInterrupt:
+        print("\n❌ 빌드가 중단되었습니다.")
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ 빌드 중 오류 발생: {e}")
+        sys.exit(1)

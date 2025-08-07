@@ -4,6 +4,7 @@ Palo Alto Parameter Checker - Flask 웹 애플리케이션
 """
 
 import os
+import sys
 import json
 from flask import Flask, render_template, request, jsonify, send_file
 from flask_cors import CORS
@@ -13,8 +14,13 @@ import tempfile
 from parameter_manager import ParameterManager
 from ssh_checker import ParameterChecker
 from report import ReportGenerator
+from utils import get_resource_path
 
-app = Flask(__name__)
+# PyInstaller 환경에서 올바른 경로 설정 (패키지된 리소스)
+template_dir = get_resource_path('templates')
+static_dir = get_resource_path('static')
+
+app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 CORS(app)
 
 # 전역 객체들
