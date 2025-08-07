@@ -77,7 +77,7 @@ def build_application_basic():
         '--hidden-import=sqlite3',
         '--hidden-import=openpyxl',
         '--hidden-import=paramiko',
-        'run.py'                       # 메인 스크립트
+        'app.py'                       # 메인 스크립트
     ]
     
     # Windows와 Linux/Mac에서 경로 구분자 다름
